@@ -1,0 +1,80 @@
+{
+  "allFiles": [
+    {
+      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/res/layout/activity_admin_forgot_password.xml",
+      "selection": {
+        "end": {
+          "column": 0,
+          "index": 0,
+          "line": 0
+        },
+        "start": {
+          "column": 0,
+          "index": 0,
+          "line": 0
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/build.gradle",
+      "selection": {
+        "end": {
+          "column": 64,
+          "index": 1585,
+          "line": 46
+        },
+        "start": {
+          "column": 64,
+          "index": 1585,
+          "line": 46
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/res/layout/activity_main.xml",
+      "selection": {
+        "end": {
+          "column": 39,
+          "index": 3864,
+          "line": 79
+        },
+        "start": {
+          "column": 39,
+          "index": 3864,
+          "line": 79
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/MainActivity.java",
+      "selection": {
+        "end": {
+          "column": 23,
+          "index": 9268,
+          "line": 209
+        },
+        "start": {
+          "column": 23,
+          "index": 9268,
+          "line": 209
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/admin.java",
+      "selection": {
+        "end": {
+          "column": 78,
+          "index": 6395,
+          "line": 142
+        },
+        "start": {
+          "column": 78,
+          "index": 6395,
+          "line": 142
+        }
+      }
+    }
+  ],
+  "selectedFile": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/res/layout/activity_main.xml"
+}

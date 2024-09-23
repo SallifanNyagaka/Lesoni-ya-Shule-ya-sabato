@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="20dp"
+    android:orientation="vertical">
+
+    <EditText
+        android:id="@+id/emailLoginField"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="Barua pepe/Email"
+        android:inputType="textEmailAddress"/>
+
+    <EditText
+        android:id="@+id/passwordLoginField"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="Neno Siri/Password"
+        android:inputType="textPassword"/>
+
+    <Button
+        android:id="@+id/loginButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:backgroundTint="@color/teal_200"
+        android:text="Ingia/Log In"/>
+
+    <Button
+        android:id="@+id/cancelButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:backgroundTint="@color/red"
+        android:text="Ghairi/Cancel"/>
+    
+    <TextView
+        android:id="@+id/forgot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Nimesahau Neno siri/Forgot Password"
+        android:textColor="@android:color/holo_blue_light"
+        android:layout_marginTop="10dp"/>
+
+</LinearLayout>

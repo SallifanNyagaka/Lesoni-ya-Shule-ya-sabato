@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:title="@string/admin">
+        <menu>
+            <item android:icon="@drawable/ic_admin" android:id="@+id/admin_section" android:title="@string/administrator"/>
+        </menu>
+    </item>
+</menu>

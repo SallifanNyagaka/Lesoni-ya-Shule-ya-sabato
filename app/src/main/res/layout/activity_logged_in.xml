@@ -1,0 +1,29 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/welcomeText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Karibu, Umeingia kwa Akaunti yako \n Welcome, you are logged in!"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_gravity="center"/>
+
+    <Button
+        android:id="@+id/logoutButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Toka kwenye Akaunti yako/ Log Out from your Account"
+        android:layout_marginTop="16dp" />
+
+    <Button
+        android:id="@+id/addAccountButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Ongeza Akaunti nyingine/Add Another Account"
+        android:layout_marginTop="16dp" />
+</LinearLayout>

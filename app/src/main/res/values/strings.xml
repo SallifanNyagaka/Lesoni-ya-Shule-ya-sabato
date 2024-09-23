@@ -1,0 +1,46 @@
+<resources>
+    <string name="app_name">Leseni ya Shule ya sabato</string>
+    <string name="date">Date</string>
+    <string name="admin">Admin</string>
+    <string name="administrator">Admin</string>
+    <string name="day_title">Day/title</string>
+    <string name="memory_text">Kifungu cha kukariri\n\n  kwamba hatalijenga hekalu, kwa hiyo Sulemani mwanae atalijenga. Daudi aliandaa vifaa vyote vinavyohitajika</string>
+    <string name="pick_the_date">Pick The Date</string>
+    <string name="share_today">Share today</string>
+    <string name="today_s_content">Today\'s content</string>
+    <string name="today_s_question">Today\'s question</string>
+    <string name="today_s_title">Today\'s title</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="verses">Luka 3:38; Zephaniah; Malaki 2:10; Waamuzi 1:3; 1Samweli 2:2; Yoshua 3:2; 1Yohana 5:1-2; Mwanzo 6; 1Yohana 3:1,2; Waeberania 2:11-18; Yohana 20:11-13; Waeberania 8; Marko 7; Mwanzo 1</string>
+    <string name="week_summary_content"> hhhh ,l,lll</string>
+    <string name="illustration_image">illustration Image</string>
+
+    <string-array name="quarter">
+        <item>Q1</item>
+        <item>Q2</item>
+        <item>Q3</item>
+        <item>Q4</item>
+    </string-array>
+
+    <string-array name="week">
+        <item>WK-1</item>
+        <item>WK-2</item>
+        <item>WK-3</item>
+        <item>WK-4</item>
+        <item>WK-5</item>
+        <item>WK-6</item>
+        <item>WK-7</item>
+        <item>WK-8</item>
+        <item>WK-9</item>
+        <item>WK-10</item>
+        <item>WK-11</item>
+        <item>WK-12</item>
+        <item>WK-13</item>
+        <item>WK-14</item>
+        <item>WK-15</item>
+        <item>WK-16</item>
+        <item>WK-17</item>
+    </string-array>
+
+</resources>

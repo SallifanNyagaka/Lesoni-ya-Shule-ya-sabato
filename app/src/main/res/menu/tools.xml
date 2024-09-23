@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item android:icon="@drawable/ic_calender" android:id="@+id/calender" android:title="calender" app:showAsAction="ifRoom"/>
+    <item android:icon="@drawable/bible" android:id="@+id/bible" android:title="Bible" app:showAsAction="ifRoom"/>
+    <item android:icon="@drawable/ic_login_register" android:id="@+id/login_register" android:title="Ingia/Login" app:showAsAction="ifRoom"/>
+</menu>

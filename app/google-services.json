@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "391979186763",
+    "project_id": "leseni-ya-shule-ya-sabat-7edc8",
+    "storage_bucket": "leseni-ya-shule-ya-sabat-7edc8.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:391979186763:android:508b92027b906446aeebce",
+        "android_client_info": {
+          "package_name": "com.sal.leseniyashuleyasabato"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "391979186763-irl693ncjt2ga6f66sen762vrakbml7l.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8MBHn4XuFvcxoOuYd7hYSndbWSEyhXBE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "391979186763-irl693ncjt2ga6f66sen762vrakbml7l.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
