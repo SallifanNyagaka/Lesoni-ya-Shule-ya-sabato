@@ -1,4 +1,13 @@
 package com.sal.leseniyashuleyasabato;
+import android.graphics.Typeface;
+import android.text.Editable;
+import android.text.SpannableStringBuilder;
+import android.text.TextWatcher;
+import android.text.style.StyleSpan;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import androidx.appcompat.app.AlertDialog;
+import java.util.HashMap;
 import java.util.Locale;
 import android.content.Context;
 import android.content.Intent;
@@ -26,6 +35,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -34,6 +44,7 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
     private Context context;
     private TextToSpeech textToSpeech;
     String tray = "gjjhggdzxjj";
+    private Map<Integer, List<String>> commentsMap = new HashMap<>();
 
     public Adapter(List<LessonModels> days, Context context) {
         this.days = days;
@@ -47,40 +58,56 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
         return new ViewHolder(day, context); // Pass the context to the ViewHolder
     }
 
-    @Override
-    public void onBindViewHolder(ViewHolder holder, int position) {
-        LessonModels lessonModel = days.get(position);
-        holder.setData(lessonModel);
-        
-        String date = holder.date.getText().toString();
-        String weekRange = holder.weekDateRange.getText().toString();
-        String title = holder.day_title.getText().toString();
-        String content = holder.day_content.getText().toString();
-        String question = holder.day_question.getText().toString();
-        
-        
-        holder.share_image.setOnClickListener(v ->{
-            String toShare = date + "\n" + weekRange + "\n" + title + "\n" + content + "\n" + question;
-                
-            Intent shareIntent = new Intent(Intent.ACTION_SEND);
-            shareIntent.setType("text/plain");
-            shareIntent.putExtra(Intent.EXTRA_TEXT, toShare);
-            shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);    
-            context.startActivity(Intent.createChooser(shareIntent, "Share via"));                
-        });
-        
-        holder.ic_tts.setOnClickListener(v -> {
-            String textToRead = title + ". " + content + ". " + question;
+   @Override
+public void onBindViewHolder(ViewHolder holder, int position) {
+    LessonModels lessonModel = days.get(position);
 
-            // Initialize TextToSpeech and start reading
-            textToSpeech = new TextToSpeech(context, status -> {
-                if (status == TextToSpeech.SUCCESS) {
-                    textToSpeech.setLanguage(new Locale("sw"));
-                    textToSpeech.speak(textToRead, TextToSpeech.QUEUE_FLUSH, null, null);
-                }
-            });                     
-        });
+    holder.date.setText(lessonModel.getDate());
+    holder.weekDateRange.setText("Wiki hii: " + lessonModel.getWeekRange());
+    holder.day_title.setText(lessonModel.getDay_title());
+
+    // Clear previous dynamic views
+    holder.paragraphContainer.removeAllViews();
+
+    // Add TextViews and EditTexts dynamically for day_content
+    addParagraphsToContainer(holder.paragraphContainer, lessonModel.getDay_content(), position);
+
+    // Add TextViews and EditTexts dynamically for day_question
+    addParagraphsToContainer(holder.paragraphContainer, lessonModel.getDay_question(), position);
+
+    holder.share_image.setImageResource(lessonModel.getShare_image());
+
+    // Check if it's Saturday and set the Saturday image visibility
+    if (lessonModel.getDateEng().toLowerCase().contains("saturday")) {
+        holder.saturday_image.setVisibility(View.VISIBLE);
+        Glide.with(context)
+            .load(Uri.parse(lessonModel.getSaturday_image_uri()))
+            .into(holder.saturday_image);
+    } else {
+        holder.saturday_image.setVisibility(View.GONE);
     }
+
+    holder.share_image.setOnClickListener(v -> {
+        String toShare = lessonModel.getDate() + "\n" + lessonModel.getWeekRange() + "\n" +
+                         lessonModel.getDay_title() + "\n" + lessonModel.getDay_content() + 
+                         "\n" + lessonModel.getDay_question();
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(Intent.EXTRA_TEXT, toShare);
+        shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(Intent.createChooser(shareIntent, "Share via"));
+    });
+
+    holder.ic_tts.setOnClickListener(v -> {
+        String textToRead = lessonModel.getDay_title() + ". " + lessonModel.getDay_content() + ". " + lessonModel.getDay_question();
+        textToSpeech = new TextToSpeech(context, status -> {
+            if (status == TextToSpeech.SUCCESS) {
+                textToSpeech.setLanguage(new Locale("sw"));
+                textToSpeech.speak(textToRead, TextToSpeech.QUEUE_FLUSH, null, null);
+            }
+        });
+    });
+}
 
     @Override
     public int getItemCount() {
@@ -91,8 +118,9 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
         private final Context context;
         private final TextView date;
         private final TextView weekDateRange;
-        private final TextView day_content;
-        private final TextView day_question;
+        //private final TextView day_content;
+        //private final TextView day_question;
+        private final LinearLayout paragraphContainer;
         private final TextView day_title;
         private final ImageView share_image;
         private final ImageView saturday_image, ic_tts;
@@ -103,37 +131,16 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
             this.date = itemView.findViewById(R.id.date);
             this.weekDateRange = itemView.findViewById(R.id.weekRange);
             this.day_title = itemView.findViewById(R.id.day_title);
-            this.day_content = itemView.findViewById(R.id.day_content);
-            this.day_question = itemView.findViewById(R.id.day_question);
+            //this.day_content = itemView.findViewById(R.id.day_content);
+            this.paragraphContainer = itemView.findViewById(R.id.paragraph_container);
+            //this.day_question = itemView.findViewById(R.id.day_question);
             this.share_image = itemView.findViewById(R.id.day_share);
             this.ic_tts = itemView.findViewById(R.id.ic_tts);
             this.saturday_image = itemView.findViewById(R.id.saturday_image);
         }
 
-        public void setData(LessonModels lessonModel) {
-            this.date.setText(lessonModel.getDate());
-            this.weekDateRange.setText("Wiki hii: " + lessonModel.getWeekRange());
-            this.day_title.setText(lessonModel.getDay_title());
-            spannableTextViewInitializers(this.day_content, lessonModel.getDay_content());
-            spannableTextViewInitializers(this.day_question, lessonModel.getDay_question());
-            this.share_image.setImageResource(lessonModel.getShare_image());
-
-            // Check if it's Saturday and set the Saturday image visibility
-            if (lessonModel.getDateEng().toLowerCase().contains("saturday")) {
-                this.saturday_image.setVisibility(View.VISIBLE);
-                Glide.with(context) // Use the passed context here
-                        .load(Uri.parse(lessonModel.getSaturday_image_uri()))
-                        .into(this.saturday_image);
-            } else {
-                this.saturday_image.setVisibility(View.GONE);
-            }
-        }
-        
-        private void spannableTextViewInitializers(TextView Tv, String spannableText) {
-        	SpannableString highlightedText = spannableBibleText(spannableText);
-            Tv.setText(highlightedText);
-            Tv.setMovementMethod(LinkMovementMethod.getInstance());
-        }
+              
+}
 
         public ArrayList<Integer> bible_Chapters(String fileName, int chaptr) {
             ArrayList<Integer> chapters = new ArrayList<>();
@@ -195,7 +202,7 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
 
             // Define the regex pattern to match simple verse structures
             Pattern versePattern = Pattern.compile(
-                    "(Mwanzo|Kutoka|Walawi|Hesabu|Kumbukumbu la Torati|Yoshua|Waamuzi|Ruthu|1 Samweli|2 Samweli|1 Wafalme|2 Wafalme|1 Mambo ya Nyakati|2 Mambo ya Nyakati|Ezra|Nehemia|Esta|Ayubu|Zaburi|Mithali|Mhubiri|Wimbo Ulio Bora|Isaya|Yeremia|Maombolezo|Ezekieli|Danieli|Hosea|Yoeli|Amosi|Obadia|Yona|Mika|Nahumu|Habakuki|Sefania|Hagai|Zekaria|Malaki|Mathayo|Marko|Luka|Yohana|Matendo ya Mitume|Warumi|1 Wakorintho|2 Wakorintho|Wagalatia|Waefeso|Wafilipi|Wakolosai|1 Wathesalonike|2 Wathesalonike|1 Timotheo|2 Timotheo|Tito|Filemoni|Waebrania|Yakobo|1 Petro|2 Petro|1 Yohana|2 Yohana|3 Yohana|Yuda|Ufunuo wa Yohana)\\s\\d+(:\\d+(-\\d+)?(,\\s*\\d+(:\\d+(-\\d+)?)*|,\\s*\\d+)*(\\s*,\\s*\\d+(:\\d+(-\\d+)?)*?)?)?\\s*;"
+                    "(Mwanzo|Kutoka|Mambo ya Walawi|Hesabu|Kumbukumbu la Torati|Yoshua|Waamuzi|Ruthu|1 Samweli|2 Samweli|1 Wafalme|2 Wafalme|1 Mambo ya Nyakati|2 Mambo ya Nyakati|Ezra|Nehemia|Esta|Ayubu|Zaburi|Mithali|Mhubiri|Wimbo Ulio Bora|Isaya|Yeremia|Maombolezo|Ezekieli|Danieli|Hosea|Yoeli|Amosi|Obadia|Yona|Mika|Nahumu|Habakuki|Sefania|Hagai|Zekaria|Malaki|Mathayo|Marko|Luka|Yohana|Matendo ya Mitume|Warumi|1 Wakorintho|2 Wakorintho|Wagalatia|Waefeso|Wafilipi|Wakolosai|1 Wathesalonike|2 Wathesalonike|1 Timotheo|2 Timotheo|Tito|Filemoni|Waebrania|Yakobo|1 Petro|2 Petro|1 Yohana|2 Yohana|3 Yohana|Yuda|Ufunuo wa Yohana)\\s\\d+(:\\d+(-\\d+)?(,\\s*\\d+(:\\d+(-\\d+)?)*|,\\s*\\d+)*(\\s*,\\s*\\d+(:\\d+(-\\d+)?)*?)?)?\\s*;"
             );
 
             Matcher matcher = versePattern.matcher(mafungu);
@@ -241,7 +248,80 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
 
     return spannableString;
 }
+ private void addParagraphsToContainer(LinearLayout container, String content, int position) {
+    String[] paragraphs = content.split("\\n\\n"); // Split content into paragraphs
 
+    for (int i = 0; i < paragraphs.length; i++) {
+        final int finI = i;    
+        String paragraph = paragraphs[finI];
+
+        // Create TextView for the paragraph
+        TextView tvParagraph = new TextView(container.getContext());
+        tvParagraph.setText(spannableBibleText(paragraph)); // Use spannable for any verses in the paragraph
+        tvParagraph.setTextSize(16);
+        tvParagraph.setPadding(4, 8, 4, 8);
+        tvParagraph.setBackgroundResource(R.drawable.selectable_item_background);
+        tvParagraph.setMovementMethod(LinkMovementMethod.getInstance());
+
+        // Add the paragraph TextView to the container
+        container.addView(tvParagraph);
+
+        // Create EditText for adding comments
+        EditText etComment = new EditText(container.getContext());
+        etComment.setHint("Ongeza maoni yako...");
+        etComment.setVisibility(View.GONE);
+        etComment.setBackgroundColor(Color.TRANSPARENT); 
+        etComment.setTextColor(R.color.grey); 
+        etComment.setTypeface(null, Typeface.ITALIC);       
+        //etComment.setBackgroundResource(R.drawable.edittext_background);
+
+        // Restore saved comment if available
+        String savedComment = getSavedComment(position, finI); // Placeholder method for retrieving saved comment
+        if (savedComment != null) {
+            etComment.setText(savedComment);
+            etComment.setVisibility(View.VISIBLE);
+        }
+
+        // Add EditText to the container
+        container.addView(etComment);
+
+        // Toggle comment visibility on paragraph click
+        tvParagraph.setOnClickListener(v -> {
+            if (etComment.getVisibility() == View.GONE) {
+                etComment.setVisibility(View.VISIBLE);
+            } else {
+                etComment.setVisibility(View.GONE);
+            }
+        });
+
+        // Save comment on text change
+        etComment.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                saveComment(position, finI, s.toString()); // Placeholder method for saving comment
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+    }
+}
+   
+    // Placeholder methods for saving and retrieving comments
+    private void saveComment(int position, int paragraphIndex, String comment) {
+        // Implement your comment-saving logic here
+    }
+
+    private String getSavedComment(int position, int paragraphIndex) {
+    // Implement your logic to retrieve saved comments here
+        return null; // Return saved comment if available
+    }   
+      
+   
+        
 private void handleVerseClick(String compVerse, int startIndex, int stopIndex) {
     // Define default values
     String book = "books/mwanzo.txt";
@@ -350,8 +430,9 @@ private void handleVerseClick(String compVerse, int startIndex, int stopIndex) {
  	Intent intent = new Intent(context, bible.class);
      intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);       
      context.startActivity(intent);   
- }    
+ }   
     
-    
+       
 }
-}
+
+ 
