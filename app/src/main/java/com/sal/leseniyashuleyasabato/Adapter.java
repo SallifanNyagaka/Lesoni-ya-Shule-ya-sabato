@@ -1,12 +1,18 @@
 package com.sal.leseniyashuleyasabato;
+import android.content.BroadcastReceiver;
+import android.content.SharedPreferences;
 import android.graphics.Typeface;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.text.Editable;
 import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
 import android.text.style.StyleSpan;
+import android.util.Log;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import androidx.appcompat.app.AlertDialog;
+import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.HashMap;
 import java.util.Locale;
 import android.content.Context;
@@ -70,10 +76,10 @@ public void onBindViewHolder(ViewHolder holder, int position) {
     holder.paragraphContainer.removeAllViews();
 
     // Add TextViews and EditTexts dynamically for day_content
-    addParagraphsToContainer(holder.paragraphContainer, lessonModel.getDay_content(), position);
+    addParagraphsToContainer(holder.paragraphContainer, lessonModel.getDay_content(), position, lessonModel.getWeekRange());
 
     // Add TextViews and EditTexts dynamically for day_question
-    addParagraphsToContainer(holder.paragraphContainer, lessonModel.getDay_question(), position);
+    addParagraphsToContainer(holder.paragraphContainer, lessonModel.getDay_question(), position, lessonModel.getWeekRange());
 
     holder.share_image.setImageResource(lessonModel.getShare_image());
 
@@ -248,16 +254,23 @@ public void onBindViewHolder(ViewHolder holder, int position) {
 
     return spannableString;
 }
- private void addParagraphsToContainer(LinearLayout container, String content, int position) {
-    String[] paragraphs = content.split("\\n\\n"); // Split content into paragraphs
+ // Generate unique key for saving comments based on week ID, position, and paragraph index
+private String generateCommentKey(String weekId, int position, int paragraphIndex) {
+    return "comment_" + weekId + "_" + position + "_" + paragraphIndex;
+}
+
+// Method to add paragraphs to the container with refined comment handling, now accepting weekId
+private void addParagraphsToContainer(LinearLayout container, String content, int position, String weekId) {
+    String[] paragraphs = content.split("\\n\\n");
+    String userEmail = getUserEmail(); // Method to get user email from SharedPreferences
 
     for (int i = 0; i < paragraphs.length; i++) {
-        final int finI = i;    
-        String paragraph = paragraphs[finI];
+        final int paragraphIndex = i;
+        String paragraph = paragraphs[paragraphIndex];
 
-        // Create TextView for the paragraph
+        // Create and configure TextView for the paragraph
         TextView tvParagraph = new TextView(container.getContext());
-        tvParagraph.setText(spannableBibleText(paragraph)); // Use spannable for any verses in the paragraph
+        tvParagraph.setText(spannableBibleText(paragraph));
         tvParagraph.setTextSize(16);
         tvParagraph.setPadding(4, 8, 4, 8);
         tvParagraph.setBackgroundResource(R.drawable.selectable_item_background);
@@ -266,17 +279,16 @@ public void onBindViewHolder(ViewHolder holder, int position) {
         // Add the paragraph TextView to the container
         container.addView(tvParagraph);
 
-        // Create EditText for adding comments
+        // Create and configure EditText for comments
         EditText etComment = new EditText(container.getContext());
         etComment.setHint("Ongeza maoni yako...");
         etComment.setVisibility(View.GONE);
-        etComment.setBackgroundColor(Color.TRANSPARENT); 
-        etComment.setTextColor(R.color.grey); 
-        etComment.setTypeface(null, Typeface.ITALIC);       
-        //etComment.setBackgroundResource(R.drawable.edittext_background);
+        etComment.setBackgroundColor(Color.TRANSPARENT);
+        etComment.setTextColor(R.color.red);
+        etComment.setTypeface(null, Typeface.ITALIC);
 
-        // Restore saved comment if available
-        String savedComment = getSavedComment(position, finI); // Placeholder method for retrieving saved comment
+        // Restore and display saved comment if available
+        String savedComment = getSavedComment(weekId, position, paragraphIndex);
         if (savedComment != null) {
             etComment.setText(savedComment);
             etComment.setVisibility(View.VISIBLE);
@@ -285,12 +297,19 @@ public void onBindViewHolder(ViewHolder holder, int position) {
         // Add EditText to the container
         container.addView(etComment);
 
-        // Toggle comment visibility on paragraph click
+        // Retrieve comments from Firestore for registered users
+        retrieveComments(weekId, position, paragraphIndex, etComment);
+
+        // Toggle EditText visibility with animation on TextView click
         tvParagraph.setOnClickListener(v -> {
             if (etComment.getVisibility() == View.GONE) {
+                etComment.setAlpha(0f);
                 etComment.setVisibility(View.VISIBLE);
+                etComment.animate().alpha(1f).setDuration(300).start();
             } else {
-                etComment.setVisibility(View.GONE);
+                etComment.animate().alpha(0f).setDuration(300).withEndAction(() -> {
+                    etComment.setVisibility(View.GONE);
+                }).start();
             }
         });
 
@@ -301,7 +320,17 @@ public void onBindViewHolder(ViewHolder holder, int position) {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                saveComment(position, finI, s.toString()); // Placeholder method for saving comment
+                String comment = s.toString();
+                saveComment(weekId, position, paragraphIndex, comment);
+
+                // Save to Firestore for registered users if online
+                if (!userEmail.equals("Haipo/ Non Existent")) {
+                    if (isConnected()) {
+                        saveCommentToFirestore(weekId, position, paragraphIndex, userEmail, comment);
+                    } else {
+                        saveOfflineComment(userEmail, weekId, position, paragraphIndex, comment);
+                    }
+                }
             }
 
             @Override
@@ -309,19 +338,165 @@ public void onBindViewHolder(ViewHolder holder, int position) {
         });
     }
 }
-   
-    // Placeholder methods for saving and retrieving comments
-    private void saveComment(int position, int paragraphIndex, String comment) {
-        // Implement your comment-saving logic here
+
+// Method to save offline comments in SharedPreferences when there's no connectivity
+private void saveOfflineComment(String userEmail, String weekId, int position, int paragraphIndex, String comment) {
+    SharedPreferences prefs = context.getSharedPreferences("OfflineComments", Context.MODE_PRIVATE);
+    SharedPreferences.Editor editor = prefs.edit();
+    String key = generateCommentKey(weekId, position, paragraphIndex) + "_" + userEmail;
+    editor.putString(key, comment);
+    editor.apply();
+}
+
+// Method to synchronize offline comments with Firestore when connectivity is restored
+public void syncOfflineComments() {
+    SharedPreferences prefs = context.getSharedPreferences("OfflineComments", Context.MODE_PRIVATE);
+    Map<String, ?> allComments = prefs.getAll();
+    for (Map.Entry<String, ?> entry : allComments.entrySet()) {
+        String key = entry.getKey();
+        String comment = (String) entry.getValue();
+
+        // Extract data from the key
+        String[] keyParts = key.split("_");
+        if (keyParts.length >= 5) { // Check that the key contains enough parts
+            String weekId = keyParts[1];
+            int position = Integer.parseInt(keyParts[2]);
+            int paragraphIndex = Integer.parseInt(keyParts[3]);
+            String userEmail = keyParts[4];
+
+            // Save the comment to Firestore
+            saveCommentToFirestore(weekId, position, paragraphIndex, userEmail, comment);
+        }
     }
 
-    private String getSavedComment(int position, int paragraphIndex) {
-    // Implement your logic to retrieve saved comments here
-        return null; // Return saved comment if available
-    }   
-      
-   
-        
+    // Clear the offline comments after synchronization
+    prefs.edit().clear().apply();
+}
+
+// Check connectivity status
+public boolean isConnected() {
+    ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+    NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+    return activeNetwork != null && activeNetwork.isConnected();
+}
+
+// Method to get user email from SharedPreferences
+private String getUserEmail() {
+    SharedPreferences prefs = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE);
+    return prefs.getString("userEmail", "Haipo/ Non Existent"); // Default value for unregistered users
+}
+
+// Efficiently save comment data using SharedPreferences
+private void saveComment(String weekId, int position, int paragraphIndex, String comment) {
+    try {
+        SharedPreferences prefs = context.getSharedPreferences("CommentsPrefs", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        String key = generateCommentKey(weekId, position, paragraphIndex);
+        editor.putString(key, comment);
+        editor.apply(); // Use apply() for asynchronous saving
+    } catch (Exception e) {
+        Toast.makeText(context, "Error saving comment: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+    }
+}
+
+// Efficiently retrieve saved comments from SharedPreferences
+private String getSavedComment(String weekId, int position, int paragraphIndex) {
+    try {
+        SharedPreferences prefs = context.getSharedPreferences("CommentsPrefs", Context.MODE_PRIVATE);
+        String key = generateCommentKey(weekId, position, paragraphIndex);
+        return prefs.getString(key, null);
+    } catch (Exception e) {
+        Toast.makeText(context, "Error retrieving comment: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        return null;
+    }
+}
+
+// Save comment to Firestore for registered users
+private void saveCommentToFirestore(String weekId, int position, int paragraphIndex, String userEmail, String comment) {
+    FirebaseFirestore db = FirebaseFirestore.getInstance();
+    String commentId = generateCommentKey(weekId, position, paragraphIndex);
+
+    // Create a Comment object
+    CommentData commentData = new CommentData(userEmail, comment);
+
+    // Save comment under the appropriate document in Firestore
+    db.collection("User_Comments") // Adjust to your structure
+        .document(weekId) // Use the current week's ID
+        .collection("comments") // Assuming there's a subcollection for comments
+        .document(commentId) // Use the unique comment ID
+        .set(commentData)
+        .addOnSuccessListener(aVoid -> Log.e("Comment saved successfully", "ok"))
+        .addOnFailureListener(e -> Toast.makeText(context, "Error saving comment: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+}
+
+// Retrieve comments from Firestore for registered users
+private void retrieveComments(String weekId, int position, int paragraphIndex, EditText etComment) {
+    String userEmail = getUserEmail(); // Get the user's email
+
+    // Check if the user is registered
+    if (!userEmail.equals("Haipo/ Non Existent")) {
+        // Retrieve comments from Firestore
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        String commentId = generateCommentKey(weekId, position, paragraphIndex);
+
+        db.collection("User_Comments")
+            .document(weekId)
+            .collection("comments")
+            .document(commentId)
+            .get()
+            .addOnSuccessListener(documentSnapshot -> {
+                if (documentSnapshot.exists()) {
+                    CommentData commentData = documentSnapshot.toObject(CommentData.class);
+                    if (commentData != null) {
+                        // Update UI with the retrieved comment
+                        String comment = commentData.getComment();
+                        etComment.setText(comment);
+                        etComment.setVisibility(View.VISIBLE);
+                        Log.e("comment found", "ok");
+                    }
+                } else {
+                    Log.e("No comment found", "No Comment");
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e("Error retrieving comment", "No Comment");;
+            });
+    }
+}
+
+ // CommentData class for storing comment information
+public static class CommentData {
+    private String userEmail;
+    private String comment;
+
+    // Default constructor required for Firestore
+    public CommentData() {}
+
+    // Constructor to initialize comment data
+    public CommentData(String userEmail, String comment) {
+        this.userEmail = userEmail;
+        this.comment = comment;
+    }
+
+    // Getters and setters
+    public String getUserEmail() {
+        return userEmail;
+    }
+
+    public void setUserEmail(String userEmail) {
+        this.userEmail = userEmail;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
+    }
+}
+
+
 private void handleVerseClick(String compVerse, int startIndex, int stopIndex) {
     // Define default values
     String book = "books/mwanzo.txt";

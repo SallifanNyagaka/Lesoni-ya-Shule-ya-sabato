@@ -1,8 +1,11 @@
 package com.sal.leseniyashuleyasabato;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.speech.tts.TextToSpeech;
 import android.text.Spannable;
@@ -117,6 +120,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     ImageView quarter_image;
     private TextToSpeech textToSpeech;
     private boolean isExpanded = false;
+    BroadcastReceiver networkReceiver;
 
     
     /* JADX INFO: Access modifiers changed from: protected */
@@ -221,7 +225,19 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         
         initDays();
         lesson_init();
-        
+            
+            IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+            networkReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    if (lesson_adapter.isConnected()) {
+                        // Synchronize offline comments with Firestore when connectivity is restored
+                        lesson_adapter.syncOfflineComments(); // Call adapter method to sync comments
+                    }
+                }
+            };
+            registerReceiver(networkReceiver, filter);
+            
         	
         } catch(Exception err) {
         	Toast.makeText(getApplicationContext(), "onCreate() "+err.toString(), Toast.LENGTH_LONG).show();
@@ -273,6 +289,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             textToSpeech.stop();
             textToSpeech.shutdown();
         }
+        
+        // Unregister the receiver to prevent memory leaks
+        if (networkReceiver != null) {
+            unregisterReceiver(networkReceiver);
+        }
+        
         super.onDestroy();
     }
 

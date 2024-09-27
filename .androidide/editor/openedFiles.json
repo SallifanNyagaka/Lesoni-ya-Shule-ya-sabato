@@ -4,73 +4,13 @@
       "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/Adapter.java",
       "selection": {
         "end": {
-          "column": 1,
-          "index": 18917,
-          "line": 437
-        },
-        "start": {
-          "column": 1,
-          "index": 18917,
-          "line": 437
-        }
-      }
-    },
-    {
-      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/res/layout/wk_day_recyc.xml",
-      "selection": {
-        "end": {
           "column": 0,
-          "index": 5616,
-          "line": 130
-        },
-        "start": {
-          "column": 0,
-          "index": 5616,
-          "line": 130
-        }
-      }
-    },
-    {
-      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/res/drawable/selectable_item_background.xml",
-      "selection": {
-        "end": {
-          "column": 11,
-          "index": 562,
-          "line": 11
-        },
-        "start": {
-          "column": 11,
-          "index": 562,
-          "line": 11
-        }
-      }
-    },
-    {
-      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/res/drawable/edittext_background.xml",
-      "selection": {
-        "end": {
-          "column": 63,
-          "index": 1063,
-          "line": 25
-        },
-        "start": {
-          "column": 63,
-          "index": 1063,
-          "line": 25
-        }
-      }
-    },
-    {
-      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/res/values/colors.xml",
-      "selection": {
-        "end": {
-          "column": 38,
-          "index": 38,
+          "index": 0,
           "line": 0
         },
         "start": {
-          "column": 38,
-          "index": 38,
+          "column": 0,
+          "index": 0,
           "line": 0
         }
       }
