@@ -14,6 +14,36 @@
           "line": 0
         }
       }
+    },
+    {
+      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/MainActivity.java",
+      "selection": {
+        "end": {
+          "column": 0,
+          "index": 0,
+          "line": 0
+        },
+        "start": {
+          "column": 0,
+          "index": 0,
+          "line": 0
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/Bible_Read.java",
+      "selection": {
+        "end": {
+          "column": 42,
+          "index": 3401,
+          "line": 100
+        },
+        "start": {
+          "column": 32,
+          "index": 3391,
+          "line": 100
+        }
+      }
     }
   ],
   "selectedFile": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/Adapter.java"

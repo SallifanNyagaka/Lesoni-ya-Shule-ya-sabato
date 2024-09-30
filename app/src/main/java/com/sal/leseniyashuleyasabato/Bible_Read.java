@@ -1,5 +1,9 @@
 package com.sal.leseniyashuleyasabato;
 
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -37,6 +41,8 @@ public class Bible_Read extends AppCompatActivity implements RecyclerViewClicks{
         verseTextBox.setText(get.getStringExtra("chapter"));
         int startVerse = get.getIntExtra("startVerse", 0);
         int stopVerse = get.getIntExtra("stopVerse", 0);
+        int Sverse = get.getIntExtra("verse", 0);
+        int to = get.getIntExtra("to", Sverse);
         String bookName = get.getStringExtra("bookName");
         BufferedReader versesReader;
         InputStream stream;
@@ -63,6 +69,9 @@ public class Bible_Read extends AppCompatActivity implements RecyclerViewClicks{
         }
 
         initVerses();
+        // Add ItemDecoration to highlight verses 4-6
+        VerseHighlightDecoration highlightDecoration = new VerseHighlightDecoration(Sverse, to);
+        verses.addItemDecoration(highlightDecoration);
 
     }
 
@@ -78,5 +87,29 @@ public class Bible_Read extends AppCompatActivity implements RecyclerViewClicks{
     @Override
     public void onItemClick(int position) {
 
+    }
+}
+class VerseHighlightDecoration extends RecyclerView.ItemDecoration {
+    private final int startVerse;
+    private final int endVerse;
+    private final Paint highlightPaint;
+
+    public VerseHighlightDecoration(int startVerse, int endVerse) {
+        this.startVerse = startVerse;
+        this.endVerse = endVerse;
+        this.highlightPaint = new Paint();
+        highlightPaint.setColor(0x80808080);  // Set highlight color
+    }
+
+    @Override
+    public void onDraw(Canvas canvas, RecyclerView parent, RecyclerView.State state) {
+        super.onDraw(canvas, parent, state);
+
+        for (int i = startVerse - 1; i < endVerse; i++) {
+            View child = parent.getLayoutManager().findViewByPosition(i);
+            if (child != null) {
+                canvas.drawRect(child.getLeft(), child.getTop(), child.getRight(), child.getBottom(), highlightPaint);
+            }
+        }
     }
 }
