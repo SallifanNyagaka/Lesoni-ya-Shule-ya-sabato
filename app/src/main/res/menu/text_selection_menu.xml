@@ -9,4 +9,9 @@
         android:title="Share"
         android:icon="@drawable/share_today"
         android:showAsAction="ifRoom"/>
+    
+      <item
+        android:id="@+id/menu_remove_highlight"
+        android:title="Remove Highlight" 
+        android:showAsAction="ifRoom"/>    
 </menu>

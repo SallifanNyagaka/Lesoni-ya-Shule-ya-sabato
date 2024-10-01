@@ -19,32 +19,47 @@
       "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/MainActivity.java",
       "selection": {
         "end": {
-          "column": 0,
-          "index": 0,
-          "line": 0
+          "column": 81,
+          "index": 10426,
+          "line": 235
         },
         "start": {
-          "column": 0,
-          "index": 0,
-          "line": 0
+          "column": 81,
+          "index": 10426,
+          "line": 235
         }
       }
     },
     {
-      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/Bible_Read.java",
+      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/res/menu/text_selection_menu.xml",
+      "selection": {
+        "end": {
+          "column": 16,
+          "index": 522,
+          "line": 15
+        },
+        "start": {
+          "column": 16,
+          "index": 522,
+          "line": 15
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/res/layout/wk_day_recyc.xml",
       "selection": {
         "end": {
           "column": 42,
-          "index": 3401,
-          "line": 100
+          "index": 731,
+          "line": 19
         },
         "start": {
-          "column": 32,
-          "index": 3391,
-          "line": 100
+          "column": 42,
+          "index": 731,
+          "line": 19
         }
       }
     }
   ],
-  "selectedFile": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/Adapter.java"
+  "selectedFile": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/res/layout/wk_day_recyc.xml"
 }

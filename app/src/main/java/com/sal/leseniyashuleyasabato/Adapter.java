@@ -1,5 +1,6 @@
 package com.sal.leseniyashuleyasabato;
 
+import com.google.firebase.firestore.SetOptions;
 import com.sal.leseniyashuleyasabato.R;
 import android.content.BroadcastReceiver;
 import android.content.SharedPreferences;
@@ -314,7 +315,6 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
         return "comment_" + weekId + "_" + position + "_" + paragraphIndex;
     }
 
-    // Method to add paragraphs to the container with refined comment handling, now accepting weekId
     private void addParagraphsToContainer(
             LinearLayout container, String content, int position, String weekId) {
         String[] paragraphs = content.split("\\n\\n");
@@ -329,9 +329,8 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
             tvParagraph.setText(spannableBibleText(paragraph));
             tvParagraph.setTextSize(16);
             tvParagraph.setPadding(4, 8, 4, 8);
-            // tvParagraph.setBackgroundResource(R.drawable.selectable_item_background);
-            tvParagraph.setMovementMethod(LinkMovementMethod.getInstance()); // Link support
             tvParagraph.setTextIsSelectable(true); // Allow text selection
+            applyUserHighlights(tvParagraph, weekId, position, paragraphIndex);
 
             // Enable long-press to activate contextual actions
             tvParagraph.setCustomSelectionActionModeCallback(
@@ -340,19 +339,31 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
                         public boolean onCreateActionMode(ActionMode mode, Menu menu) {
                             // Inflate the menu with "Highlight" and "Share" actions
                             MenuInflater inflater = mode.getMenuInflater();
-                            inflater.inflate(
-                                    R.menu.text_selection_menu, menu); // Create a custom menu
-                            return true; // Action mode created
+                            inflater.inflate(R.menu.text_selection_menu, menu);
+                            return true;
                         }
 
                         @Override
                         public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-                            return false; // Nothing to prepare
+                            int min = 0;
+                            int max = tvParagraph.getText().length();
+                            // Check if the selected text is already highlighted
+                            boolean isHighlighted = checkIfHighlighted(tvParagraph, min, max);
+
+                            // Show or hide the "Remove Highlight" option based on the highlight
+                            // status
+                            MenuItem removeHighlightItem =
+                                    menu.findItem(R.id.menu_remove_highlight);
+                            if (isHighlighted) {
+                                removeHighlightItem.setVisible(true);
+                            } else {
+                                removeHighlightItem.setVisible(false);
+                            }
+                            return true;
                         }
 
                         @Override
                         public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-                            // Get the selected text
                             int min = 0;
                             int max = tvParagraph.getText().length();
                             if (tvParagraph.isFocused()) {
@@ -362,20 +373,19 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
                                 max = Math.max(0, Math.max(selStart, selEnd));
                             }
 
-                            // Extract the selected text
                             final CharSequence selectedText =
                                     tvParagraph.getText().subSequence(min, max);
 
-                            // Using if-else instead of switch-case
                             if (item.getItemId() == R.id.menu_highlight) {
-                                // Highlight the selected text
-                                Spannable spannable = (Spannable) tvParagraph.getText();
-                                spannable.setSpan(
-                                        new BackgroundColorSpan(0x80808080),
-                                        min,
-                                        max,
-                                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                                // Show color selection dialog
+                                showColorPickerDialog(
+                                        tvParagraph, weekId, position, paragraphIndex, min, max);
                                 mode.finish(); // Close action mode
+                                return true;
+                            } else if (item.getItemId() == R.id.menu_remove_highlight) {
+                                // Remove the highlight
+                                removeHighlight(weekId, position, paragraphIndex, tvParagraph);
+                                mode.finish();
                                 return true;
                             } else if (item.getItemId() == R.id.menu_share) {
                                 // Share the selected text
@@ -386,27 +396,26 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
                                         .getContext()
                                         .startActivity(
                                                 Intent.createChooser(shareIntent, "Share Text"));
-                                mode.finish(); // Close action mode
+                                mode.finish();
                                 return true;
                             }
 
-                            return false; // Return false if no action was taken
+                            return false;
                         }
 
                         @Override
-                        public void onDestroyActionMode(ActionMode mode) {
-                            // Clean up when action mode is destroyed
-                        }
+                        public void onDestroyActionMode(ActionMode mode) {}
                     });
 
             // Add the paragraph TextView to the container
             container.addView(tvParagraph);
+
             // Create and configure EditText for comments
             EditText etComment = new EditText(container.getContext());
             etComment.setHint("Ongeza maoni yako...");
             etComment.setVisibility(View.GONE);
             etComment.setBackgroundColor(Color.TRANSPARENT);
-            etComment.setTextColor(Color.parseColor("#9E9E9E")); // Example for grey color
+            etComment.setTextColor(Color.parseColor("#9E9E9E"));
             etComment.setTypeface(null, Typeface.ITALIC);
 
             // Restore and display saved comment if available
@@ -415,6 +424,8 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
                 etComment.setText(savedComment);
                 etComment.setVisibility(View.VISIBLE);
             }
+
+            tvParagraph.setMovementMethod(LinkMovementMethod.getInstance());
 
             // Add EditText to the container
             container.addView(etComment);
@@ -470,6 +481,286 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
                         @Override
                         public void afterTextChanged(Editable s) {}
                     });
+        }
+    }
+
+    private boolean checkIfHighlighted(TextView textView, int start, int end) {
+        BackgroundColorSpan[] spans =
+                ((Spannable) textView.getText()).getSpans(start, end, BackgroundColorSpan.class);
+        return spans.length > 0;
+    }
+
+    // Method to show color picker dialog
+    private void showColorPickerDialog(
+            TextView tvParagraph,
+            String weekId,
+            int position,
+            int paragraphIndex,
+            int start,
+            int end) {
+        // Define the colors with 50% opacity
+        final int[] colors = {
+            Color.argb(128, 255, 0, 0), // Red
+            Color.argb(128, 0, 255, 0), // Green
+            Color.argb(128, 0, 0, 255), // Blue
+            Color.argb(128, 255, 255, 0), // Yellow
+            Color.argb(128, 255, 165, 0), // Orange
+            Color.argb(128, 128, 0, 128), // Purple
+            Color.argb(128, 255, 192, 203) // Pink
+        };
+
+        // Create an AlertDialog to show color options
+        AlertDialog.Builder builder = new AlertDialog.Builder(tvParagraph.getContext());
+        builder.setTitle("Choose a highlight color");
+
+        // Create a layout for the dialog
+        LinearLayout layout = new LinearLayout(tvParagraph.getContext());
+        layout.setOrientation(LinearLayout.VERTICAL);
+
+        // Create color buttons
+        for (int color : colors) {
+            View colorView = new View(tvParagraph.getContext());
+            colorView.setBackgroundColor(color);
+            colorView.setLayoutParams(
+                    new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 100));
+            colorView.setOnClickListener(
+                    v -> {
+                        // Highlight the selected text with the chosen color
+                        Spannable spannable = (Spannable) tvParagraph.getText();
+                        spannable.setSpan(
+                                new BackgroundColorSpan(color),
+                                start,
+                                end,
+                                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+                        // Save the highlight with the chosen color
+                        saveHighlight(weekId, position, paragraphIndex, start, end, color);
+
+                        if (isConnected()) {
+                            saveHighlightToFirestore(
+                                    weekId,
+                                    position,
+                                    paragraphIndex,
+                                    getUserEmail(),
+                                    start,
+                                    end,
+                                    color);
+                        } else {
+                            saveOfflineHighlight(
+                                    getUserEmail(),
+                                    weekId,
+                                    position,
+                                    paragraphIndex,
+                                    start,
+                                    end,
+                                    color);
+                        }
+                    });
+            layout.addView(colorView);
+        }
+
+        builder.setView(layout);
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
+        builder.show();
+    }
+
+    // Save highlight for offline use
+    private void saveOfflineHighlight(
+            String userEmail,
+            String weekId,
+            int position,
+            int paragraphIndex,
+            int start,
+            int end,
+            int color) {
+        SharedPreferences prefs =
+                context.getSharedPreferences("OfflineHighlights", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        String key = generateHighlightKey(weekId, position, paragraphIndex) + "_" + userEmail;
+        String highlightData = start + "," + end + "," + color;
+        editor.putString(key, highlightData);
+        editor.apply();
+    }
+
+    // Save highlight for online sync
+    private void saveHighlight(
+            String weekId, int position, int paragraphIndex, int start, int end, int color) {
+        SharedPreferences prefs =
+                context.getSharedPreferences("OfflineHighlights", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        String key = generateHighlightKey(weekId, position, paragraphIndex);
+
+        // Store highlight marker along with the color in a formatted string
+        editor.putString(key, "highlighted:" + color); // Format: "highlighted:color"
+        editor.apply();
+    }
+
+    // Generate unique highlight key based on weekId, position, and paragraphIndex
+    private String generateHighlightKey(String weekId, int position, int paragraphIndex) {
+        return "highlight_" + weekId + "_" + position + "_" + paragraphIndex;
+    }
+
+    // Sync offline highlights to Firestore
+    public void syncOfflineHighlights() {
+        SharedPreferences prefs =
+                context.getSharedPreferences("OfflineHighlights", Context.MODE_PRIVATE);
+        Map<String, ?> allHighlights = prefs.getAll();
+        for (Map.Entry<String, ?> entry : allHighlights.entrySet()) {
+            String key = entry.getKey();
+            String highlightData = (String) entry.getValue();
+
+            // Extract data from the key and value
+            String[] keyParts = key.split("_");
+            if (keyParts.length >= 5) {
+                String weekId = keyParts[1];
+                int position = Integer.parseInt(keyParts[2]);
+                int paragraphIndex = Integer.parseInt(keyParts[3]);
+                String userEmail = keyParts[4];
+
+                // Extract start, end, and color from highlightData
+                String[] dataParts = highlightData.split(",");
+                int start = Integer.parseInt(dataParts[0]);
+                int end = Integer.parseInt(dataParts[1]);
+                int color = Integer.parseInt(dataParts[2]);
+
+                // Save the highlight to Firestore
+                saveHighlightToFirestore(
+                        weekId, position, paragraphIndex, userEmail, start, end, color);
+            }
+        }
+
+        // Clear offline highlights after sync
+        prefs.edit().clear().apply();
+    }
+
+    public static String getDayOfWeek(int day) {
+        switch (day) {
+            case 0:
+                return "Saturday";
+            case 1:
+                return "Sunday";
+            case 2:
+                return "Monday";
+            case 3:
+                return "Tuesday";
+            case 4:
+                return "Wednesday";
+            case 5:
+                return "Thursday";
+            case 6:
+                return "Friday";
+            default:
+                return "Invalid"; // Handle invalid inputs
+        }
+    }
+
+    // Save highlight to Firestore
+    private void saveHighlightToFirestore(
+            String weekId,
+            int position,
+            int paragraphIndex,
+            String userEmail,
+            int start,
+            int end,
+            int color) {
+        Map<String, Object> highlightData = new HashMap<>();
+        highlightData.put("start", start);
+        highlightData.put("end", end);
+        highlightData.put("color", color);
+        highlightData.put("userEmail", userEmail);
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection("highlights")
+                .document(weekId)
+                .collection(getDayOfWeek(position))
+                .document("paragraph_" + paragraphIndex)
+                .collection("user_highlights")
+                .document(userEmail)
+                .set(highlightData, SetOptions.merge());
+    }
+
+    private void applyUserHighlights(
+            TextView tvParagraph, String weekId, int position, int paragraphIndex) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        String userEmail = getUserEmail(); // Method to get user email from SharedPreferences
+        Spannable spannable = (Spannable) tvParagraph.getText();
+
+        if (isConnected()) {
+            // Fetch highlights from Firestore
+            db.collection("highlights")
+                    .document(weekId)
+                    .collection(getDayOfWeek(position))
+                    .document("paragraph_" + paragraphIndex)
+                    .collection("user_highlights")
+                    .document(userEmail)
+                    .get()
+                    .addOnSuccessListener(
+                            documentSnapshot -> {
+                                if (documentSnapshot.exists()) {
+                                    int start = documentSnapshot.getLong("start").intValue();
+                                    int end = documentSnapshot.getLong("end").intValue();
+                                    int color = documentSnapshot.getLong("color").intValue();
+
+                                    spannable.setSpan(
+                                            new BackgroundColorSpan(color),
+                                            start,
+                                            end,
+                                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                                }
+                            });
+        } else {
+            // Retrieve highlights from SharedPreferences
+            SharedPreferences prefs =
+                    context.getSharedPreferences("OfflineHighlights", Context.MODE_PRIVATE);
+            String key = generateHighlightKey(weekId, position, paragraphIndex);
+            String highlightData = prefs.getString(key, null);
+
+            if (highlightData != null) {
+                String[] parts = highlightData.split(",");
+                int start = Integer.parseInt(parts[0]);
+                int end = Integer.parseInt(parts[1]);
+                int color = Integer.parseInt(parts[2]); // Assuming color is stored as an int
+
+                spannable.setSpan(
+                        new BackgroundColorSpan(color),
+                        start,
+                        end,
+                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+        }
+    }
+
+    // Method to remove highlight from a paragraph
+    private void removeHighlight(
+            String weekId, int position, int paragraphIndex, TextView tvParagraph) {
+        Spannable spannable = (Spannable) tvParagraph.getText();
+        BackgroundColorSpan[] spans =
+                spannable.getSpans(0, tvParagraph.getText().length(), BackgroundColorSpan.class);
+
+        // Remove the highlight by removing BackgroundColorSpans
+        for (BackgroundColorSpan span : spans) {
+            spannable.removeSpan(span);
+        }
+
+        // Remove the highlight from Firestore or SharedPreferences
+        if (isConnected()) {
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            String userEmail = getUserEmail(); // Retrieve user's email from SharedPreferences
+            db.collection("highlights")
+                    .document(weekId)
+                    .collection(getDayOfWeek(position))
+                    .document("paragraph_" + paragraphIndex)
+                    .collection("user_highlights")
+                    .document(userEmail)
+                    .delete();
+        } else {
+            // Remove highlight from shared preferences if offline
+            SharedPreferences prefs =
+                    context.getSharedPreferences("OfflineHighlights", Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            String key = generateHighlightKey(weekId, position, paragraphIndex);
+            editor.remove(key);
+            editor.apply();
         }
     }
 
