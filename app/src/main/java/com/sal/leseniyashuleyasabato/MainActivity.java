@@ -234,6 +234,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                         // Synchronize offline comments with Firestore when connectivity is restored
                         lesson_adapter.syncOfflineComments(); // Call adapter method to sync comments
                         lesson_adapter.syncOfflineHighlights(); //sync highlights
+                        lesson_adapter.syncRemovedHighlights(); //sync removed highlights
                     }
                 }
             };

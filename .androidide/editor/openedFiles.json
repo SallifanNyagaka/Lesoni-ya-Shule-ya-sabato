@@ -1,65 +1,35 @@
 {
   "allFiles": [
     {
-      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/Adapter.java",
-      "selection": {
-        "end": {
-          "column": 0,
-          "index": 0,
-          "line": 0
-        },
-        "start": {
-          "column": 0,
-          "index": 0,
-          "line": 0
-        }
-      }
-    },
-    {
       "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/MainActivity.java",
       "selection": {
         "end": {
-          "column": 81,
-          "index": 10426,
-          "line": 235
+          "column": 11,
+          "index": 8209,
+          "line": 189
         },
         "start": {
-          "column": 81,
-          "index": 10426,
-          "line": 235
+          "column": 11,
+          "index": 8209,
+          "line": 189
         }
       }
     },
     {
-      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/res/menu/text_selection_menu.xml",
+      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/Adapter.java",
       "selection": {
         "end": {
-          "column": 16,
-          "index": 522,
-          "line": 15
+          "column": 81,
+          "index": 13981,
+          "line": 331
         },
         "start": {
-          "column": 16,
-          "index": 522,
-          "line": 15
-        }
-      }
-    },
-    {
-      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/res/layout/wk_day_recyc.xml",
-      "selection": {
-        "end": {
-          "column": 42,
-          "index": 731,
-          "line": 19
-        },
-        "start": {
-          "column": 42,
-          "index": 731,
-          "line": 19
+          "column": 81,
+          "index": 13981,
+          "line": 331
         }
       }
     }
   ],
-  "selectedFile": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/res/layout/wk_day_recyc.xml"
+  "selectedFile": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/Adapter.java"
 }

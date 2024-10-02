@@ -59,7 +59,21 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
     private TextToSpeech textToSpeech;
     String tray = "gjjhggdzxjj";
     private Map<Integer, List<String>> commentsMap = new HashMap<>();
-
+    
+    private static final String[] TERMS_TO_BOLD = {
+    "Sehemu ya III: Matumizi maishani",
+    "Sehemu ya II: Ufafanuzi",
+    "Muhtasari",
+    "Maswali ya Kujadili",
+    "Jifunze zaidi",
+    "Kisa cha ndani",
+    "Somo la juma hili",
+    "Fungu la Kukariri",
+    "Sabato Mchana",
+    "Soma",
+    "Fungu kuu",
+    "Kiini cha somo"
+};
     public Adapter(List<LessonModels> days, Context context) {
         this.days = days;
         this.context = context;
@@ -309,6 +323,28 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
 
         return spannableString;
     }
+    
+    private SpannableString applyBoldTerms(String content) {
+    SpannableString spannableString = new SpannableString(content);
+
+    String[] termsToBold = {
+        "Sehemu ya III: Matumizi maishani", "Sehemu ya II: Ufafanuzi", "Muhtasari", 
+        "Maswali ya Kujadili", "Jifunze zaidi", "Kisa cha ndani", "Somo la Juma Hili",
+        "Fungu la Kukariri", "Sabato Mchana", "Soma", "Fungu kuu", "Kiini cha somo"
+    };
+
+    // Iterate over each term to bold
+    for (String term : termsToBold) {
+        Pattern pattern = Pattern.compile(Pattern.quote(term), Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(content);
+
+        while (matcher.find()) {
+            spannableString.setSpan(new StyleSpan(Typeface.BOLD), matcher.start(), matcher.end(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+    }
+
+    return spannableString;
+}
 
     // Generate unique key for saving comments based on week ID, position, and paragraph index
     private String generateCommentKey(String weekId, int position, int paragraphIndex) {
@@ -323,10 +359,15 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
         for (int i = 0; i < paragraphs.length; i++) {
             final int paragraphIndex = i;
             String paragraph = paragraphs[paragraphIndex];
+            
+            SpannableString spannableParagraph = applyBoldTerms(paragraph);
+        
+        // Then, apply the Bible verse spans
+        SpannableString finalSpannable = spannableBibleText(spannableParagraph.toString());
 
             // Create and configure TextView for the paragraph
             TextView tvParagraph = new TextView(container.getContext());
-            tvParagraph.setText(spannableBibleText(paragraph));
+            tvParagraph.setText(spannableBibleText(finalSpannable.toString()));
             tvParagraph.setTextSize(16);
             tvParagraph.setPadding(4, 8, 4, 8);
             tvParagraph.setTextIsSelectable(true); // Allow text selection
@@ -563,37 +604,41 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
         builder.show();
     }
-
-    // Save highlight for offline use
-    private void saveOfflineHighlight(
-            String userEmail,
-            String weekId,
-            int position,
-            int paragraphIndex,
-            int start,
-            int end,
-            int color) {
-        SharedPreferences prefs =
-                context.getSharedPreferences("OfflineHighlights", Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-        String key = generateHighlightKey(weekId, position, paragraphIndex) + "_" + userEmail;
-        String highlightData = start + "," + end + "," + color;
-        editor.putString(key, highlightData);
-        editor.apply();
-    }
-
-    // Save highlight for online sync
-    private void saveHighlight(
-            String weekId, int position, int paragraphIndex, int start, int end, int color) {
-        SharedPreferences prefs =
-                context.getSharedPreferences("OfflineHighlights", Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-        String key = generateHighlightKey(weekId, position, paragraphIndex);
-
-        // Store highlight marker along with the color in a formatted string
-        editor.putString(key, "highlighted:" + color); // Format: "highlighted:color"
-        editor.apply();
-    }
+    
+private void saveOfflineHighlight(
+        String userEmail,
+        String weekId,
+        int position,
+        int paragraphIndex,
+        int start,
+        int end,
+        int color) {
+    SharedPreferences prefs = context.getSharedPreferences("OfflineHighlights", Context.MODE_PRIVATE);
+    SharedPreferences.Editor editor = prefs.edit();
+    
+    // Remove any existing highlight
+    String existingKey = generateHighlightKey(weekId, position, paragraphIndex) + "_" + userEmail;
+    editor.remove(existingKey);
+    
+    // Save new highlight
+    String key = existingKey; // Use the same key
+    String highlightData = start + "," + end + "," + color;
+    editor.putString(key, highlightData);
+    editor.apply();
+}
+    private void saveHighlight(String weekId, int position, int paragraphIndex, int start, int end, int color) {
+    SharedPreferences prefs = context.getSharedPreferences("OfflineHighlights", Context.MODE_PRIVATE);
+    SharedPreferences.Editor editor = prefs.edit();
+    
+    // Remove any existing highlight
+    String key = generateHighlightKey(weekId, position, paragraphIndex);
+    editor.remove(key);
+    
+    // Save new highlight
+    editor.putString(key, start + "," + end + "," + color);
+    editor.apply();
+}
+    
 
     // Generate unique highlight key based on weekId, position, and paragraphIndex
     private String generateHighlightKey(String weekId, int position, int paragraphIndex) {
@@ -629,8 +674,8 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
             }
         }
 
-        // Clear offline highlights after sync
-        prefs.edit().clear().apply();
+        //Clear offline highlights after sync but no need
+        //prefs.edit().clear().apply();
     }
 
     public static String getDayOfWeek(int day) {
@@ -687,6 +732,7 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
 
         if (isConnected()) {
             // Fetch highlights from Firestore
+            final Spannable fin = spannable;
             db.collection("highlights")
                     .document(weekId)
                     .collection(getDayOfWeek(position))
@@ -701,7 +747,7 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
                                     int end = documentSnapshot.getLong("end").intValue();
                                     int color = documentSnapshot.getLong("color").intValue();
 
-                                    spannable.setSpan(
+                                    fin.setSpan(
                                             new BackgroundColorSpan(color),
                                             start,
                                             end,
@@ -710,60 +756,100 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
                             });
         } else {
             // Retrieve highlights from SharedPreferences
-            SharedPreferences prefs =
-                    context.getSharedPreferences("OfflineHighlights", Context.MODE_PRIVATE);
-            String key = generateHighlightKey(weekId, position, paragraphIndex);
-            String highlightData = prefs.getString(key, null);
+            SharedPreferences prefs = context.getSharedPreferences("OfflineHighlights", Context.MODE_PRIVATE);
+    String key = generateHighlightKey(weekId, position, paragraphIndex);
+    
+    // Check if there is a saved highlight in SharedPreferences
+    String highlightData = prefs.getString(key, null);
+    
+    if (highlightData != null) {
+        // Parse the saved data (start, end, color)
+        String[] parts = highlightData.split(",");
+        int start = Integer.parseInt(parts[0]);
+        int end = Integer.parseInt(parts[1]);
+        int color = Integer.parseInt(parts[2]);
 
-            if (highlightData != null) {
-                String[] parts = highlightData.split(",");
-                int start = Integer.parseInt(parts[0]);
-                int end = Integer.parseInt(parts[1]);
-                int color = Integer.parseInt(parts[2]); // Assuming color is stored as an int
-
-                spannable.setSpan(
-                        new BackgroundColorSpan(color),
-                        start,
-                        end,
-                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        // Apply the highlight to the TextView
+        spannable = (Spannable) tvParagraph.getText();
+        spannable.setSpan(new BackgroundColorSpan(color), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
         }
     }
 
     // Method to remove highlight from a paragraph
-    private void removeHighlight(
-            String weekId, int position, int paragraphIndex, TextView tvParagraph) {
-        Spannable spannable = (Spannable) tvParagraph.getText();
-        BackgroundColorSpan[] spans =
-                spannable.getSpans(0, tvParagraph.getText().length(), BackgroundColorSpan.class);
+    private void removeHighlight(String weekId, int position, int paragraphIndex, TextView tvParagraph) {
+    Spannable spannable = (Spannable) tvParagraph.getText();
+    BackgroundColorSpan[] spans = spannable.getSpans(0, tvParagraph.getText().length(), BackgroundColorSpan.class);
 
-        // Remove the highlight by removing BackgroundColorSpans
-        for (BackgroundColorSpan span : spans) {
-            spannable.removeSpan(span);
-        }
-
-        // Remove the highlight from Firestore or SharedPreferences
-        if (isConnected()) {
-            FirebaseFirestore db = FirebaseFirestore.getInstance();
-            String userEmail = getUserEmail(); // Retrieve user's email from SharedPreferences
-            db.collection("highlights")
-                    .document(weekId)
-                    .collection(getDayOfWeek(position))
-                    .document("paragraph_" + paragraphIndex)
-                    .collection("user_highlights")
-                    .document(userEmail)
-                    .delete();
-        } else {
-            // Remove highlight from shared preferences if offline
-            SharedPreferences prefs =
-                    context.getSharedPreferences("OfflineHighlights", Context.MODE_PRIVATE);
-            SharedPreferences.Editor editor = prefs.edit();
-            String key = generateHighlightKey(weekId, position, paragraphIndex);
-            editor.remove(key);
-            editor.apply();
-        }
+    // Remove the highlight by removing BackgroundColorSpans
+    for (BackgroundColorSpan span : spans) {
+        spannable.removeSpan(span);
     }
 
+    if (isConnected()) {
+        // Remove the highlight from Firestore
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        String userEmail = getUserEmail(); // Retrieve user's email from SharedPreferences
+        db.collection("highlights")
+                .document(weekId)
+                .collection(getDayOfWeek(position))
+                .document("paragraph_" + paragraphIndex)
+                .collection("user_highlights")
+                .document(userEmail)
+                .delete();
+    } else {
+        // Store highlight removal for future sync in SharedPreferences
+        SharedPreferences prefs = context.getSharedPreferences("RemovedHighlightsSync", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+
+        // Store the details of the removal for later sync
+        String removalKey = generateHighlightKey(weekId, position, paragraphIndex);
+        editor.putString(removalKey, weekId + "," + position + "," + paragraphIndex);
+        editor.apply();
+
+        // Also remove from offline highlights
+        SharedPreferences offlinePrefs = context.getSharedPreferences("OfflineHighlights", Context.MODE_PRIVATE);
+        SharedPreferences.Editor offlineEditor = offlinePrefs.edit();
+        String offlineKey = generateHighlightKey(weekId, position, paragraphIndex);
+        offlineEditor.remove(offlineKey);
+        offlineEditor.apply();
+    }
+}
+    
+public void syncRemovedHighlights() {
+    if (isConnected()) {
+        SharedPreferences prefs = context.getSharedPreferences("RemovedHighlightsSync", Context.MODE_PRIVATE);
+        Map<String, ?> removals = prefs.getAll();
+
+        if (!removals.isEmpty()) {
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            String userEmail = getUserEmail();
+
+            for (Map.Entry<String, ?> entry : removals.entrySet()) {
+                String[] details = entry.getValue().toString().split(",");
+                String weekId = details[0];
+                int position = Integer.parseInt(details[1]);
+                int paragraphIndex = Integer.parseInt(details[2]);
+
+                // Delete highlight from Firestore
+                db.collection("highlights")
+                        .document(weekId)
+                        .collection(getDayOfWeek(position))
+                        .document("paragraph_" + paragraphIndex)
+                        .collection("user_highlights")
+                        .document(userEmail)
+                        .delete()
+                        .addOnSuccessListener(aVoid -> {
+                            // Remove from shared preferences after successful sync
+                            SharedPreferences.Editor editor = prefs.edit();
+                            editor.remove(entry.getKey());
+                            editor.apply();
+                        });
+            }
+        }
+    }
+}
+    
     // Method to save offline comments in SharedPreferences when there's no connectivity
     private void saveOfflineComment(
             String userEmail, String weekId, int position, int paragraphIndex, String comment) {
