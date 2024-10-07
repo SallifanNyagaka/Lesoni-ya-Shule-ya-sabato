@@ -96,7 +96,7 @@ public class admin extends AppCompatActivity implements DatePickerDialog.OnDateS
     private Calendar calender = Calendar.getInstance();
     
     private ImageView saturdayImageView, quarter_image_view;
-    private Button selectImageButton, select_QuarterImage_button;
+    private Button selectImageButton, select_QuarterImage_button, upload_teacher;
     
     private Uri imageUri, QURI;
     private FirebaseFirestore firestoreDatabase = FirebaseFirestore.getInstance();
@@ -126,6 +126,7 @@ public class admin extends AppCompatActivity implements DatePickerDialog.OnDateS
         this.quarter_image_view = findViewById(R.id.quarter_image_view);
         this.selectImageButton = findViewById(R.id.select_image_button);
         this.select_QuarterImage_button = findViewById(R.id.select_QuarterImage_button);
+        this.upload_teacher = findViewById(R.id.upload_teacher);
         Button quarterTitleUpload = findViewById(R.id.quarterTitleupload);
         
         quarterTitleUpload.setOnClickListener(new View.OnClickListener(){
@@ -192,6 +193,13 @@ public class admin extends AppCompatActivity implements DatePickerDialog.OnDateS
             @Override
             public void onClick(View view) {
                 admin.this.uploadContent(uploadStatusTextView);
+            }
+        });
+        
+        upload_teacher.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                uploadTeacherContent(uploadStatusTextView);
             }
         });
 
@@ -449,6 +457,55 @@ private void startCrop(Uri uri) {
                         if (imageUri != null && calender.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
                             uploadSaturdayImage(weekRef.collection("days").document(currentDateString), statusTextView, imageUri);
                         }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Toast.makeText(getApplicationContext(), "content upload failed", Toast.LENGTH_SHORT).show();
+                        statusTextView.setText("Failed to upload content: " + e.getMessage());
+                    }
+                });
+    }
+    
+    
+    private void uploadTeacherContent(final TextView statusTextView) {
+        String title = titleEditText.getText().toString();
+        String content = contentEditText.getText().toString();
+        String question = questionEditText.getText().toString();
+        Date date = new Date();
+        Timestamp timestamp = new Timestamp(date);
+
+        if (selectedQuarter == null || selectedWeek == null || currentDateString == null) {
+            statusTextView.setText("Please select quarter, week, and date.");
+            return;
+        }
+
+        if (title.isEmpty() || content.isEmpty() || question.isEmpty()) {
+            statusTextView.setText("Please fill in all fields.");
+            return;
+        }
+        
+        final Map<String, Object> dayContent = new HashMap<>();
+        dayContent.put(FIELD_TITLE, title);
+        dayContent.put(FIELD_DATE, currentDateString);
+        dayContent.put(FIELD_CONTENT, content);
+        dayContent.put(FIELD_QUESTION, question);
+        dayContent.put(FIELD_URI, "none");
+        dayContent.put("timeStamp", timestamp);
+        dayContent.put("dateEng", currentDateStringEnglish);
+        dayContent.put("weekDateRange", weekContentRange);
+
+        final DocumentReference weekRef = firestoreDatabase.collection("quarters_"+calender.get(Calendar.YEAR))
+                .document(selectedQuarter).collection("weeks").document(selectedWeek);
+        
+        weekRef.collection("teacher").document("Teacher_Comments")
+                .set(dayContent)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        statusTextView.setText("Content uploaded successfully.");
+                        Toast.makeText(getApplicationContext(), "content upload success", Toast.LENGTH_SHORT).show();
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {

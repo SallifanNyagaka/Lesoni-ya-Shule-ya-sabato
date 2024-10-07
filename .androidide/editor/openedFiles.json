@@ -4,32 +4,17 @@
       "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/MainActivity.java",
       "selection": {
         "end": {
-          "column": 11,
-          "index": 8209,
-          "line": 189
+          "column": 28,
+          "index": 4827,
+          "line": 128
         },
         "start": {
-          "column": 11,
-          "index": 8209,
-          "line": 189
-        }
-      }
-    },
-    {
-      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/Adapter.java",
-      "selection": {
-        "end": {
-          "column": 81,
-          "index": 13981,
-          "line": 331
-        },
-        "start": {
-          "column": 81,
-          "index": 13981,
-          "line": 331
+          "column": 28,
+          "index": 4827,
+          "line": 128
         }
       }
     }
   ],
-  "selectedFile": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/Adapter.java"
+  "selectedFile": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/MainActivity.java"
 }

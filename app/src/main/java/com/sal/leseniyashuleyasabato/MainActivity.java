@@ -1,4 +1,5 @@
 package com.sal.leseniyashuleyasabato;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -87,7 +88,10 @@ import java.util.Arrays;
 import java.util.regex.PatternSyntaxException;
 
 /* loaded from: classes3.dex */
-public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener, DatePickerDialog.OnDateSetListener, TextToSpeech.OnInitListener {
+public class MainActivity extends AppCompatActivity
+        implements NavigationView.OnNavigationItemSelectedListener,
+                DatePickerDialog.OnDateSetListener,
+                TextToSpeech.OnInitListener {
     String Q;
     Spinner QWeeks;
     RecyclerView day;
@@ -100,7 +104,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     Adapter lesson_adapter;
     List<LessonModels> lesson_days;
     Calendar currentCal = Calendar.getInstance();
-    Integer month = currentCal.get(Calendar.MONTH) + 1;  // Calendar.MONTH is zero-based;
+    Integer month = currentCal.get(Calendar.MONTH) + 1; // Calendar.MONTH is zero-based;
     String quarterCollectionPath;
     CollectionReference quarterWeekDays;
     String quarterWeekDocumentPath;
@@ -121,10 +125,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private TextToSpeech textToSpeech;
     private boolean isExpanded = false;
     BroadcastReceiver networkReceiver;
+    String teacherPathName = "quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + "WK-1" + "/"+ "teacher";
+    String lessonPathName = "quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + "WK-1" + "/"+ "days";
 
-    
+
     /* JADX INFO: Access modifiers changed from: protected */
-    @Override // androidx.fragment.app.FragmentActivity, androidx.activity.ComponentActivity, androidx.core.app.ComponentActivity, android.app.Activity
+    @Override // androidx.fragment.app.FragmentActivity, androidx.activity.ComponentActivity,
+              // androidx.core.app.ComponentActivity, android.app.Activity
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // Get the SharedPreferences to check registration status
@@ -142,146 +149,203 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
         // User is registered, load the main content
         setContentView(R.layout.activity_main);
-        
+
         this.textToSpeech = new TextToSpeech(this, this);
         this.quarter_image = findViewById(R.id.quarter_image);
         this.verses = findViewById(R.id.verses);
         Toolbar toolbar = findViewById(R.id.action_bar);
         setSupportActionBar(toolbar);
-        
+
         try {
-        final DocumentReference quarter = db.collection("quarters_"+year.toString()).document(Quarter());       
-        quarter.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>(){
-           @Override
-           public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-            if (task.isSuccessful()) {
-                DocumentSnapshot document = task.getResult();
-                if (document.exists()) {
-                    quarterTitle = document.getString("QuarterTitle");
-                    quarterIntroduction = document.getString("quarterIntroduction");
-                    imageUrl = document.getString("image_url");
-                                            
-                    if (getSupportActionBar() != null) {
-                        getSupportActionBar().setTitle(quarterTitle);                                
-                    }  
-                    
-                    if (!MainActivity.this.isDestroyed() && imageUrl != null && !imageUrl.isEmpty()) {
-                        Glide.with(MainActivity.this).load(imageUrl).into(quarter_image);
-                    } else {
-                            quarter_image.setImageResource(R.drawable.lesson); // Or any default image
+            final DocumentReference quarter =
+                    db.collection("quarters_" + year.toString()).document(Quarter());
+            quarter.get()
+                    .addOnCompleteListener(
+                            new OnCompleteListener<DocumentSnapshot>() {
+                                @Override
+                                public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                                    if (task.isSuccessful()) {
+                                        DocumentSnapshot document = task.getResult();
+                                        if (document.exists()) {
+                                            quarterTitle = document.getString("QuarterTitle");
+                                            quarterIntroduction =
+                                                    document.getString("quarterIntroduction");
+                                            imageUrl = document.getString("image_url");
+
+                                            if (getSupportActionBar() != null) {
+                                                getSupportActionBar().setTitle(quarterTitle);
+                                            }
+
+                                            if (!MainActivity.this.isDestroyed()
+                                                    && imageUrl != null
+                                                    && !imageUrl.isEmpty()) {
+                                                Glide.with(MainActivity.this)
+                                                        .load(imageUrl)
+                                                        .into(quarter_image);
+                                            } else {
+                                                quarter_image.setImageResource(
+                                                        R.drawable.lesson); // Or any default image
+                                            }
+                                            if (quarterIntroduction != null) {
+                                                SpannableString highlightedText =
+                                                        spannableBibleText(quarterIntroduction);
+                                                verses.setText(highlightedText);
+                                                verses.setMovementMethod(
+                                                        LinkMovementMethod.getInstance());
+                                            } else {
+                                                Toast.makeText(
+                                                                getApplicationContext(),
+                                                                "Quarter Intro not loaded",
+                                                                Toast.LENGTH_LONG)
+                                                        .show();
+                                            }
+
+                                            Toast.makeText(
+                                                            getApplicationContext(),
+                                                            quarterTitle,
+                                                            Toast.LENGTH_SHORT)
+                                                    .show();
+                                        } else {
+                                            Toast.makeText(
+                                                            getApplicationContext(),
+                                                            "No such Document",
+                                                            Toast.LENGTH_SHORT)
+                                                    .show();
+                                        }
+                                    } else {
+                                        Toast.makeText(
+                                                        getApplicationContext(),
+                                                        "failed to load document",
+                                                        Toast.LENGTH_SHORT)
+                                                .show();
+                                    }
+                                }
+                            });
+
+            weekTitle = findViewById(R.id.weekTitle);
+            weekTitle.setText(quarterMonths(Quarter()));
+
+            this.QWeeks = findViewById(R.id.quarterWeeks);
+            String str = "quarters_" + year.toString() + "/" + Quarter() + "/weeks";
+            this.quarterCollectionPath = str;
+            this.quarterWeekDocumentPath = "/WK-1/days";
+            this.weekT =
+                    this.db
+                            .collection("quarters_" + year.toString())
+                            .document(Quarter())
+                            .collection("weeks")
+                            .document("WK-1");
+            this.quarterWeekDays = this.db.collection("quarters" + year.toString());
+            this.drawer = findViewById(R.id.drawer_layout);
+            btnToggle = findViewById(R.id.btnToggle);
+            NavigationView navigationView = findViewById(R.id.nav_view);
+            navigationView.setNavigationItemSelectedListener(this);
+            ActionBarDrawerToggle toggle =
+                    new ActionBarDrawerToggle(
+                            this,
+                            this.drawer,
+                            toolbar,
+                            R.string.navigation_drawer_open,
+                            R.string.navigation_drawer_close);
+            this.drawer.addDrawerListener(toggle);
+            toggle.syncState();
+
+            btnToggle.setOnClickListener(
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            if (isExpanded) {
+                                verses.setMaxLines(3);
+                                btnToggle.setText("Soma zaidi");
+                            } else {
+                                verses.setMaxLines(Integer.MAX_VALUE);
+                                btnToggle.setText("Soma Kidogo");
+                            }
+                            isExpanded = !isExpanded;
                         }
-                    if(quarterIntroduction != null) {
-                    	SpannableString highlightedText = spannableBibleText(quarterIntroduction);
-                        verses.setText(highlightedText);
-                        verses.setMovementMethod(LinkMovementMethod.getInstance());  
-                    }else{
-                        Toast.makeText(getApplicationContext(), "Quarter Intro not loaded", Toast.LENGTH_LONG).show();
-                    }            
-                          
-                                
-                    Toast.makeText(getApplicationContext(), quarterTitle, Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(getApplicationContext(), "No such Document", Toast.LENGTH_SHORT).show();
-                }
-            } else {
-                Toast.makeText(getApplicationContext(), "failed to load document", Toast.LENGTH_SHORT).show();
-                }
-            }    
-        });
-            
-        
-        
-        weekTitle = findViewById(R.id.weekTitle);
-        weekTitle.setText(quarterMonths(Quarter()));   
-        
-        this.QWeeks = findViewById(R.id.quarterWeeks);
-        String str = "quarters_"+year.toString()+"/"+Quarter()+"/weeks";
-        this.quarterCollectionPath = str;
-        this.quarterWeekDocumentPath = "/WK-1/days";
-        this.weekT = this.db.collection("quarters_"+year.toString()).document(Quarter()).collection("weeks").document("WK-1");
-        this.quarterWeekDays = this.db.collection("quarters"+year.toString());
-        this.drawer = findViewById(R.id.drawer_layout);
-        btnToggle = findViewById(R.id.btnToggle);    
-        NavigationView navigationView = findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, this.drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        this.drawer.addDrawerListener(toggle);
-        toggle.syncState();
-        
-        btnToggle.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (isExpanded) {
-                    verses.setMaxLines(3);
-                    btnToggle.setText("Soma zaidi");
-                } else {
-                    verses.setMaxLines(Integer.MAX_VALUE);
-                    btnToggle.setText("Soma Kidogo");
-                }
-                isExpanded = !isExpanded;
-            }
-        });    
-            
-        
-        initDays();
-        lesson_init();
-            
+                    });
+
+            initDays();
+            // lesson_init(lesson_adapter.teacher);
+
             IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
-            networkReceiver = new BroadcastReceiver() {
-                @Override
-                public void onReceive(Context context, Intent intent) {
-                    if (lesson_adapter.isConnected()) {
-                        // Synchronize offline comments with Firestore when connectivity is restored
-                        lesson_adapter.syncOfflineComments(); // Call adapter method to sync comments
-                        lesson_adapter.syncOfflineHighlights(); //sync highlights
-                        lesson_adapter.syncRemovedHighlights(); //sync removed highlights
-                    }
-                }
-            };
+            networkReceiver =
+                    new BroadcastReceiver() {
+                        @Override
+                        public void onReceive(Context context, Intent intent) {
+                            if (lesson_adapter.isConnected()) {
+                                // Synchronize offline comments with Firestore when connectivity is
+                                // restored
+                                lesson_adapter
+                                        .syncOfflineComments(); // Call adapter method to sync
+                                                                // comments
+                                lesson_adapter.syncOfflineHighlights(); // sync highlights
+                                lesson_adapter.syncRemovedHighlights(); // sync removed highlights
+                            }
+                        }
+                    };
             registerReceiver(networkReceiver, filter);
-            
-        	
-        } catch(Exception err) {
-        	Toast.makeText(getApplicationContext(), "onCreate() "+err.toString(), Toast.LENGTH_LONG).show();
+
+        } catch (Exception err) {
+            Toast.makeText(
+                            getApplicationContext(),
+                            "onCreate() " + err.toString(),
+                            Toast.LENGTH_LONG)
+                    .show();
         }
-       
     }
-    
-    
 
     /* JADX INFO: Access modifiers changed from: protected */
-    @Override // androidx.appcompat.app.AppCompatActivity, androidx.fragment.app.FragmentActivity, android.app.Activity
+    @Override // androidx.appcompat.app.AppCompatActivity, androidx.fragment.app.FragmentActivity,
+              // android.app.Activity
     public void onStart() {
         super.onStart();
-        this.weekT.addSnapshotListener(this, new EventListener<DocumentSnapshot>() { // from class: com.sal.leseniyashuleyasabato.MainActivity.1
-        static final /* synthetic */ boolean $assertionsDisabled = false;
+        this.weekT.addSnapshotListener(
+                this,
+                new EventListener<
+                        DocumentSnapshot>() { // from class:
+                                              // com.sal.leseniyashuleyasabato.MainActivity.1
+                    static final /* synthetic */ boolean $assertionsDisabled = false;
 
-            @Override // com.google.firebase.firestore.EventListener
-            public void onEvent(DocumentSnapshot value, FirebaseFirestoreException error) {
-                if (error != null) {
-                    Toast.makeText(MainActivity.this.getApplicationContext(), "Error while loading", Toast.LENGTH_SHORT).show();
-                }
-               if (value == null) {
-                    throw new AssertionError();
-                }
-                if (value.exists()) {
-                    MainActivity.this.title = value.getString("title");
-                }
-            }
-        });
+                    @Override // com.google.firebase.firestore.EventListener
+                    public void onEvent(DocumentSnapshot value, FirebaseFirestoreException error) {
+                        if (error != null) {
+                            Toast.makeText(
+                                            MainActivity.this.getApplicationContext(),
+                                            "Error while loading",
+                                            Toast.LENGTH_SHORT)
+                                    .show();
+                        }
+                        if (value == null) {
+                            throw new AssertionError();
+                        }
+                        if (value.exists()) {
+                            MainActivity.this.title = value.getString("title");
+                        }
+                    }
+                });
     }
-    
+
     @Override
     public void onInit(int status) {
         if (status == TextToSpeech.SUCCESS) {
             int result = textToSpeech.setLanguage(new Locale("sw"));
-            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+            if (result == TextToSpeech.LANG_MISSING_DATA
+                    || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 Log.e("TTS", "Swahili language is not supported!");
-                Toast.makeText(getApplicationContext(), "Samahani Lugha ya Kiswahili haikubaliki kwa mtambo huu", Toast.LENGTH_SHORT).show();
+                Toast.makeText(
+                                getApplicationContext(),
+                                "Samahani Lugha ya Kiswahili haikubaliki kwa mtambo huu",
+                                Toast.LENGTH_SHORT)
+                        .show();
             }
         } else {
             Log.e("TTS", "Initialization failed!");
-            Toast.makeText(getApplicationContext(), "Imeshindwa Kuanzisha msomaji", Toast.LENGTH_SHORT).show();
+            Toast.makeText(
+                            getApplicationContext(),
+                            "Imeshindwa Kuanzisha msomaji",
+                            Toast.LENGTH_SHORT)
+                    .show();
         }
     }
 
@@ -291,16 +355,15 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             textToSpeech.stop();
             textToSpeech.shutdown();
         }
-        
+
         // Unregister the receiver to prevent memory leaks
         if (networkReceiver != null) {
             unregisterReceiver(networkReceiver);
         }
-        
+
         super.onDestroy();
     }
 
-    
     public String Quarter() {
         String[] Qs = {"Q1", "Q2", "Q3", "Q4"};
         if (this.month != 0 && this.month < 4) {
@@ -314,19 +377,19 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
         return this.Q;
     }
-    
-    public String quarterMonths(String quarter){
+
+    public String quarterMonths(String quarter) {
         String months = "Lesoni ya shule ya Sabato";
-        if (quarter == "Q1"){
+        if (quarter == "Q1") {
             months = "Januari, Februari, Machi";
-        }else if(quarter == "Q2"){
+        } else if (quarter == "Q2") {
             months = "Aprili, Mei, Juni";
-        }else if(quarter == "Q3"){
+        } else if (quarter == "Q3") {
             months = "Julai, Agosti, Septemba";
-        }else if(quarter == "Q4"){
+        } else if (quarter == "Q4") {
             months = "Oktoba, Novemba, Desemba";
         }
-        
+
         return months;
     }
 
@@ -349,136 +412,392 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
     }
 
-   private void initDays() {
+    private void initDays() {
+
         try {
-        	this.lesson_days = new ArrayList<>();
-            this.lesson_adapter = new Adapter(this.lesson_days, this);
+            this.lesson_days = new ArrayList<>();
+            
+            try {
+                // Use a Set to ensure unique titles
+                HashSet<String> titles = new HashSet<>();
+
+                // Show a progress indicator while fetching data
+                // ... (e.g., show a progress bar or disable UI elements)
+
+                db.collection("quarters_" + year)
+                        .document(Quarter()) // Assuming Quarter() returns the current quarter
+                        .collection("weeks")
+                        .orderBy("timeStamp", Query.Direction.ASCENDING)
+                        .get()
+                        .addOnSuccessListener(
+                                new OnSuccessListener<QuerySnapshot>() {
+                                    @Override
+                                    public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                                        for (QueryDocumentSnapshot weekSnapshot :
+                                                queryDocumentSnapshots) {
+                                            String weekDateRange =
+                                                    weekSnapshot.getString("weekDateRange");
+                                            String title = weekSnapshot.getString("week_Title");
+                                            if (title != null) {
+                                                titles.add(title);
+                                            } else {
+                                                // Handle cases where the "title" field is missing
+                                                // Log an error or display a warning message
+                                                // ...
+                                            }
+                                        }
+
+                                        // Hide the progress indicator
+                                        // ...
+
+                                        // Populate the spinner with unique titles
+                                        ArrayAdapter<String> weekTitles =
+                                                new ArrayAdapter<>(
+                                                        MainActivity.this,
+                                                        android.R.layout
+                                                                .simple_spinner_dropdown_item,
+                                                        new ArrayList<>(titles));
+                                        QWeeks.setAdapter(weekTitles);
+
+                                        QWeeks.setOnItemSelectedListener(
+                                                new AdapterView.OnItemSelectedListener() {
+                                                    @Override
+                                                    public void onItemSelected(
+                                                            AdapterView<?> adapterView,
+                                                            View view,
+                                                            int position,
+                                                            long id) {
+                                                        String selectedTitle =
+                                                                adapterView
+                                                                        .getItemAtPosition(position)
+                                                                        .toString();
+                                                        db.collection(
+                                                                        "quarters_"
+                                                                                + year
+                                                                                        .toString()) // Full path reference to quarters
+                                                                .document(Quarter())
+                                                                .collection("weeks")
+                                                                .get()
+                                                                .addOnSuccessListener(
+                                                                        new OnSuccessListener<
+                                                                                QuerySnapshot>() {
+                                                                            @Override
+                                                                            public void onSuccess(
+                                                                                    QuerySnapshot
+                                                                                            queryDocumentSnapshots) {
+                                                                                for (QueryDocumentSnapshot
+                                                                                        snapshot :
+                                                                                                queryDocumentSnapshots) {
+                                                                                    if (selectedTitle
+                                                                                            .equals(
+                                                                                                    snapshot
+                                                                                                            .getString(
+                                                                                                                    "week_Title"))) {
+                                                                                        lesson_days
+                                                                                                .clear();
+                                                                                        db.collection(
+                                                                                                        "quarters_"
+                                                                                                                + year
+                                                                                                                        .toString()) // Full path reference to the specific week
+                                                                                                .document(
+                                                                                                        Quarter())
+                                                                                                .collection(
+                                                                                                        "weeks")
+                                                                                                .document(
+                                                                                                        snapshot
+                                                                                                                .getId())
+                                                                                                .collection(
+                                                                                                        "days")
+                                                                                                .orderBy(
+                                                                                                        "timeStamp",
+                                                                                                        Query
+                                                                                                                .Direction
+                                                                                                                .ASCENDING)
+                                                                                                .get()
+                                                                                                .addOnSuccessListener(
+                                                                                                        new OnSuccessListener<
+                                                                                                                QuerySnapshot>() {
+                                                                                                            @Override
+                                                                                                            public
+                                                                                                            void
+                                                                                                                    onSuccess(
+                                                                                                                            QuerySnapshot
+                                                                                                                                    queryDocumentSnapshots) {
+                                                                                                                teacherPathName =
+                                                                                                                        "quarters_"
+                                                                                                                                + year
+                                                                                                                                        .toString()
+                                                                                                                                + "/"
+                                                                                                                                + Quarter()
+                                                                                                                                + "/"
+                                                                                                                                + "weeks"
+                                                                                                                                + "/"
+                                                                                                                                + snapshot.getId()
+                                                                                                                                        .toString()
+                                                                                                                                + "/"
+                                                                                                                                + "teacher";
+                                                                                                                lessonPathName =
+                                                                                                                        "quarters_"
+                                                                                                                                + year
+                                                                                                                                        .toString()
+                                                                                                                                + "/"
+                                                                                                                                + Quarter()
+                                                                                                                                + "/"
+                                                                                                                                + "weeks"
+                                                                                                                                + "/"
+                                                                                                                                + snapshot.getId()
+                                                                                                                                        .toString()
+                                                                                                                                + "/"
+                                                                                                                                + "days";
+                                                                                                                for (QueryDocumentSnapshot
+                                                                                                                        snapshot2 :
+                                                                                                                                queryDocumentSnapshots) {
+                                                                                                                    String
+                                                                                                                            days =
+                                                                                                                                    snapshot2
+                                                                                                                                            .getString(
+                                                                                                                                                    "date");
+                                                                                                                    String
+                                                                                                                            day_title =
+                                                                                                                                    snapshot2
+                                                                                                                                            .getString(
+                                                                                                                                                    "title");
+                                                                                                                    String
+                                                                                                                            day_content =
+                                                                                                                                    snapshot2
+                                                                                                                                            .getString(
+                                                                                                                                                    "content");
+                                                                                                                    String
+                                                                                                                            day_question =
+                                                                                                                                    snapshot2
+                                                                                                                                            .getString(
+                                                                                                                                                    "question");
+                                                                                                                    String
+                                                                                                                            image_Uri =
+                                                                                                                                    snapshot2
+                                                                                                                                            .getString(
+                                                                                                                                                    "image_url");
+                                                                                                                    String
+                                                                                                                            dateEng =
+                                                                                                                                    snapshot2
+                                                                                                                                            .getString(
+                                                                                                                                                    "dateEng");
+                                                                                                                    String
+                                                                                                                            weekRange =
+                                                                                                                                    snapshot2
+                                                                                                                                            .getString(
+                                                                                                                                                    "weekDateRange");
+                                                                                                                    lesson_days
+                                                                                                                            .add(
+                                                                                                                                    new LessonModels(
+                                                                                                                                            days,
+                                                                                                                                            dateEng,
+                                                                                                                                            weekRange,
+                                                                                                                                            R
+                                                                                                                                                    .drawable
+                                                                                                                                                    .share_today,
+                                                                                                                                            day_title,
+                                                                                                                                            day_content,
+                                                                                                                                            day_question,
+                                                                                                                                            image_Uri));
+                                                                                                                }
+                                                                                                                lesson_adapter
+                                                                                                                        .notifyDataSetChanged();
+                                                                                                            }
+                                                                                                        });
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        })
+                                                                .addOnFailureListener(
+                                                                        new OnFailureListener() {
+                                                                            @Override
+                                                                            public void onFailure(
+                                                                                    @NonNull
+                                                                                            Exception
+                                                                                                    e) {
+                                                                                Toast.makeText(
+                                                                                                MainActivity
+                                                                                                        .this,
+                                                                                                "Failed to load Content: "
+                                                                                                        + e
+                                                                                                                .getMessage(),
+                                                                                                Toast
+                                                                                                        .LENGTH_LONG)
+                                                                                        .show();
+                                                                            }
+                                                                        });
+                                                    }
+
+                                                    @Override
+                                                    public void onNothingSelected(
+                                                            AdapterView<?> adapterView) {
+                                                        // Handle the case where nothing is selected
+                                                        // ...
+                                                    }
+                                                });
+                                    }
+                                })
+                        .addOnFailureListener(
+                                new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                        // Hide the progress indicator
+                                        // ...
+
+                                        Toast.makeText(
+                                                        MainActivity.this,
+                                                        "Failed to load quarters: "
+                                                                + e.getMessage(),
+                                                        Toast.LENGTH_LONG)
+                                                .show();
+                                        // Log the error for debugging
+                                        // ...
+                                    }
+                                });
+            } catch (Exception err) {
+                Toast.makeText(
+                                getApplicationContext(),
+                                "lessonInit() " + err.toString(),
+                                Toast.LENGTH_SHORT)
+                        .show();
+                // Log the error for debugging
+                // ...
+            }
+
+            this.lesson_adapter =
+                    new Adapter(this.lesson_days, this, teacherPathName, lessonPathName);
             this.day = findViewById(R.id.wk_day);
             this.wk_day_manager = new LinearLayoutManager(getApplicationContext());
             this.day.setAdapter(this.lesson_adapter);
             this.day.setLayoutManager(this.wk_day_manager);
-        } catch(Exception err) {
-            Toast.makeText(getApplicationContext(), "initDays() "+err.toString(), Toast.LENGTH_SHORT).show();
-        }
-        
-    }
-
-private void lesson_init() {
-        try {
-            // Use a Set to ensure unique titles
-            HashSet<String> titles = new HashSet<>();
-
-            // Show a progress indicator while fetching data
-            // ... (e.g., show a progress bar or disable UI elements)
-
-            db.collection("quarters_" + year)
-                .document(Quarter()) // Assuming Quarter() returns the current quarter
-                .collection("weeks")
-                .orderBy("timeStamp", Query.Direction.ASCENDING)
-                .get()
-                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
-                    @Override
-                    public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
-                        for (QueryDocumentSnapshot weekSnapshot : queryDocumentSnapshots) {
-                            String weekDateRange = weekSnapshot.getString("weekDateRange");
-                            String title = weekSnapshot.getString("week_Title");
-                            if (title != null) {
-                                titles.add(title);
-                            } else {
-                                // Handle cases where the "title" field is missing
-                                // Log an error or display a warning message
-                                // ...
-                            }
-                        }
-
-                        // Hide the progress indicator
-                        // ...
-
-                        // Populate the spinner with unique titles
-                        ArrayAdapter<String> weekTitles = new ArrayAdapter<>(MainActivity.this,
-                                android.R.layout.simple_spinner_dropdown_item, new ArrayList<>(titles));
-                        QWeeks.setAdapter(weekTitles);
-
-                        QWeeks.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                            @Override
-                            public void onItemSelected(AdapterView<?> adapterView, View view, int position, long id) {
-                                String selectedTitle = adapterView.getItemAtPosition(position).toString();
-                                fetchLessonContent(selectedTitle);
-                            }
-
-                            @Override
-                            public void onNothingSelected(AdapterView<?> adapterView) {
-                                // Handle the case where nothing is selected
-                                // ...
-                            }
-                        });
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        // Hide the progress indicator
-                        // ...
-
-                        Toast.makeText(MainActivity.this, "Failed to load quarters: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                        // Log the error for debugging
-                        // ...
-                    }
-                });
         } catch (Exception err) {
-            Toast.makeText(getApplicationContext(), "lessonInit() " + err.toString(), Toast.LENGTH_SHORT).show();
-            // Log the error for debugging
-            // ...
+            Toast.makeText(
+                            getApplicationContext(),
+                            "initDays() " + err.toString(),
+                            Toast.LENGTH_SHORT)
+                    .show();
         }
     }
-    
-    
-private void fetchLessonContent(String selectedTitle) {
-        db.collection("quarters_" + year.toString())  // Full path reference to quarters
-        .document(Quarter())
-        .collection("weeks")
-        .get()
-        .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
-            @Override
-            public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
-                for (QueryDocumentSnapshot snapshot : queryDocumentSnapshots) {
-                    if (selectedTitle.equals(snapshot.getString("week_Title"))) {
-                        lesson_days.clear();    
-                        db.collection("quarters_" + year.toString())  // Full path reference to the specific week
-                            .document(Quarter())
-                            .collection("weeks")
-                            .document(snapshot.getId())
-                            .collection("days")
-                            .orderBy("timeStamp", Query.Direction.ASCENDING)
-                            .get()
-                            .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+
+    /*private void lesson_init(String teacher) {
+            try {
+                // Use a Set to ensure unique titles
+                HashSet<String> titles = new HashSet<>();
+
+                // Show a progress indicator while fetching data
+                // ... (e.g., show a progress bar or disable UI elements)
+
+                db.collection("quarters_" + year)
+                    .document(Quarter()) // Assuming Quarter() returns the current quarter
+                    .collection("weeks")
+                    .orderBy("timeStamp", Query.Direction.ASCENDING)
+                    .get()
+                    .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                        @Override
+                        public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                            for (QueryDocumentSnapshot weekSnapshot : queryDocumentSnapshots) {
+                                String weekDateRange = weekSnapshot.getString("weekDateRange");
+                                String title = weekSnapshot.getString("week_Title");
+                                if (title != null) {
+                                    titles.add(title);
+                                } else {
+                                    // Handle cases where the "title" field is missing
+                                    // Log an error or display a warning message
+                                    // ...
+                                }
+                            }
+
+                            // Hide the progress indicator
+                            // ...
+
+                            // Populate the spinner with unique titles
+                            ArrayAdapter<String> weekTitles = new ArrayAdapter<>(MainActivity.this,
+                                    android.R.layout.simple_spinner_dropdown_item, new ArrayList<>(titles));
+                            QWeeks.setAdapter(weekTitles);
+
+                            QWeeks.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                                 @Override
-                                public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
-                                    for (QueryDocumentSnapshot snapshot2 : queryDocumentSnapshots) {
-                                        String days = snapshot2.getString("date");
-                                        String day_title = snapshot2.getString("title");
-                                        String day_content = snapshot2.getString("content");
-                                        String day_question = snapshot2.getString("question");
-                                        String image_Uri = snapshot2.getString("image_url");
-                                        String dateEng = snapshot2.getString("dateEng");  
-                                        String weekRange = snapshot2.getString("weekDateRange");    
-                                        lesson_days.add(new LessonModels(days, dateEng, weekRange, R.drawable.share_today, day_title, day_content, day_question, image_Uri));
-                                    }
-                                    lesson_adapter.notifyDataSetChanged();
+                                public void onItemSelected(AdapterView<?> adapterView, View view, int position, long id) {
+                                    String selectedTitle = adapterView.getItemAtPosition(position).toString();
+                                    fetchLessonContent(selectedTitle, teacher);
+                                }
+
+                                @Override
+                                public void onNothingSelected(AdapterView<?> adapterView) {
+                                    // Handle the case where nothing is selected
+                                    // ...
                                 }
                             });
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            // Hide the progress indicator
+                            // ...
+
+                            Toast.makeText(MainActivity.this, "Failed to load quarters: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                            // Log the error for debugging
+                            // ...
+                        }
+                    });
+            } catch (Exception err) {
+                Toast.makeText(getApplicationContext(), "lessonInit() " + err.toString(), Toast.LENGTH_SHORT).show();
+                // Log the error for debugging
+                // ...
+            }
+        }
+
+
+    private void fetchLessonContent(String selectedTitle, String teacher) {
+            db.collection("quarters_" + year.toString())  // Full path reference to quarters
+            .document(Quarter())
+            .collection("weeks")
+            .get()
+            .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                @Override
+                public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                    for (QueryDocumentSnapshot snapshot : queryDocumentSnapshots) {
+                        if (selectedTitle.equals(snapshot.getString("week_Title"))) {
+                            lesson_days.clear();
+                            db.collection("quarters_" + year.toString())  // Full path reference to the specific week
+                                .document(Quarter())
+                                .collection("weeks")
+                                .document(snapshot.getId())
+                                .collection(teacher)
+                                .orderBy("timeStamp", Query.Direction.ASCENDING)
+                                .get()
+                                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                                    @Override
+                                    public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                                        teacherPathName = "quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + snapshot.getId().toString() + "/"+ "teacher";
+                                        lessonPathName = "quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + snapshot.getId().toString() + "/"+ "days";
+                                        for (QueryDocumentSnapshot snapshot2 : queryDocumentSnapshots) {
+                                            String days = snapshot2.getString("date");
+                                            String day_title = snapshot2.getString("title");
+                                            String day_content = snapshot2.getString("content");
+                                            String day_question = snapshot2.getString("question");
+                                            String image_Uri = snapshot2.getString("image_url");
+                                            String dateEng = snapshot2.getString("dateEng");
+                                            String weekRange = snapshot2.getString("weekDateRange");
+                                            lesson_days.add(new LessonModels(days, dateEng, weekRange, R.drawable.share_today, day_title, day_content, day_question, image_Uri));
+                                        }
+                                        lesson_adapter.notifyDataSetChanged();
+                                    }
+                                });
+                        }
                     }
                 }
-            }
-        })
-        .addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception e) {
-                Toast.makeText(MainActivity.this, "Failed to load Content: " + e.getMessage(), Toast.LENGTH_LONG).show();
-            }
-        });
-}    
-    
+            })
+            .addOnFailureListener(new OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull Exception e) {
+                    Toast.makeText(MainActivity.this, "Failed to load Content: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                }
+            });
+    } */
+
     @Override // android.app.Activity
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.calender) {
@@ -487,18 +806,17 @@ private void fetchLessonContent(String selectedTitle) {
             Toast.makeText(MainActivity.this, "calender selected", Toast.LENGTH_SHORT).show();
             return true;
         }
-        if (item.getItemId() == R.id.bible){
+        if (item.getItemId() == R.id.bible) {
             Intent bible = new Intent(MainActivity.this, com.sal.leseniyashuleyasabato.bible.class);
             startActivity(bible);
             return true;
-
         }
-        if(item.getItemId() == R.id.login_register){
+        if (item.getItemId() == R.id.login_register) {
             Intent reg = new Intent(MainActivity.this, RegisterActivity.class);
             startActivity(reg);
             return true;
         }
-        
+
         return super.onOptionsItemSelected(item);
     }
 
@@ -519,224 +837,281 @@ private void fetchLessonContent(String selectedTitle) {
         this.month = i1 + 1;
         this.today = i2;
     }
-    
-    public ArrayList<Integer> bible_Chapters(String fileName, int chaptr){
-        
-        ArrayList<Integer> chapters =new ArrayList<>();
+
+    public ArrayList<Integer> bible_Chapters(String fileName, int chaptr) {
+
+        ArrayList<Integer> chapters = new ArrayList<>();
         Integer prevline = 0;
         ArrayList<BibleMemory> chapterNlineNo = new ArrayList<>();
         ArrayList<Integer> preVerse = new ArrayList<>();
-        
+
         try {
-        	InputStream stream = getAssets().open(fileName);
+            InputStream stream = getAssets().open(fileName);
             BufferedReader read = new BufferedReader(new InputStreamReader(stream));
             StringBuffer result = new StringBuffer();
             String buffer;
             chapterNlineNo = new ArrayList<>();
             Integer Chapt = 0;
             Integer ChaptLine = 0;
-            
-            while((buffer = read.readLine()) != null) {
-            	result.append(buffer).append("\n");
-                ChaptLine +=1 ;
+
+            while ((buffer = read.readLine()) != null) {
+                result.append(buffer).append("\n");
+                ChaptLine += 1;
                 prevline = ChaptLine;
-                
-                if (!buffer.startsWith(" ")){
+
+                if (!buffer.startsWith(" ")) {
                     Chapt += 1;
                     chapterNlineNo.add(new BibleMemory(Chapt, ChaptLine));
-                }    
+                }
             }
-        
-        } catch(Exception err) {
-        	Toast.makeText(getApplicationContext(), "Kifungu hakikupatikana.\n Inafungua Biblia...", Toast.LENGTH_LONG).show();
+
+        } catch (Exception err) {
+            Toast.makeText(
+                            getApplicationContext(),
+                            "Kifungu hakikupatikana.\n Inafungua Biblia...",
+                            Toast.LENGTH_LONG)
+                    .show();
             cannotOpen();
         }
         try {
-        	for (BibleMemory memory: chapterNlineNo) {
-            int chapter = memory.getLineIncrement();
-            Integer chapterNo = memory.getChapterLine();
-            if(chapterNo > 1) {
-                preVerse.add(chapterNo);
+            for (BibleMemory memory : chapterNlineNo) {
+                int chapter = memory.getLineIncrement();
+                Integer chapterNo = memory.getChapterLine();
+                if (chapterNo > 1) {
+                    preVerse.add(chapterNo);
+                }
+
+                if (chapter == chaptr) {
+                    chapters.add(chapterNo);
+                }
             }
-                
-            if (chapter == chaptr){
-                chapters.add(chapterNo);
-            }
-        }
-        preVerse.add(prevline+1);
-        int stop = preVerse.get(chaptr-1);
-        chapters.add(stop);
-            
-        } catch(IndexOutOfBoundsException err) {
-            Toast.makeText(getApplicationContext(), "Samahani Kifungu Hiki Hakikupatikana Katika Biblia. Inafungua Biblia...", Toast.LENGTH_LONG).show();
+            preVerse.add(prevline + 1);
+            int stop = preVerse.get(chaptr - 1);
+            chapters.add(stop);
+
+        } catch (IndexOutOfBoundsException err) {
+            Toast.makeText(
+                            getApplicationContext(),
+                            "Samahani Kifungu Hiki Hakikupatikana Katika Biblia. Inafungua Biblia...",
+                            Toast.LENGTH_LONG)
+                    .show();
             cannotOpen();
         }
-        
-        
+
         return chapters;
     }
-    
-      // Define a regex pattern to match all Swahili book names and verse numbers
+
+    // Define a regex pattern to match all Swahili book names and verse numbers
     public SpannableString spannableBibleText(String mafungu) {
-    SpannableString spannableString = new SpannableString(mafungu);
+        SpannableString spannableString = new SpannableString(mafungu);
 
-    // Define the regex pattern to match simple verse structures
-    Pattern versePattern = Pattern.compile(
-        "(Mwanzo|Kutoka|Walawi|Hesabu|Kumbukumbu la Torati|Yoshua|Waamuzi|Ruthu|1 Samweli|2 Samweli|1 Wafalme|2 Wafalme|1 Mambo ya Nyakati|2 Mambo ya Nyakati|Ezra|Nehemia|Esta|Ayubu|Zaburi|Mithali|Mhubiri|Wimbo Ulio Bora|Isaya|Yeremia|Maombolezo|Ezekieli|Danieli|Hosea|Yoeli|Amosi|Obadia|Yona|Mika|Nahumu|Habakuki|Sefania|Hagai|Zekaria|Malaki|Mathayo|Marko|Luka|Yohana|Matendo ya Mitume|Warumi|1 Wakorintho|2 Wakorintho|Wagalatia|Waefeso|Wafilipi|Wakolosai|1 Wathesalonike|2 Wathesalonike|1 Timotheo|2 Timotheo|Tito|Filemoni|Waebrania|Yakobo|1 Petro|2 Petro|1 Yohana|2 Yohana|3 Yohana|Yuda|Ufunuo wa Yohana)\\s\\d+(:\\d+(-\\d+)?(,\\s*\\d+(:\\d+(-\\d+)?)*|,\\s*\\d+)*(\\s*,\\s*\\d+(:\\d+(-\\d+)?)*?)?)?\\s*;"
-    );
+        // Define the regex pattern to match simple verse structures
+        Pattern versePattern =
+                Pattern.compile(
+                        "(Mwanzo|Kutoka|Walawi|Hesabu|Kumbukumbu la Torati|Yoshua|Waamuzi|Ruthu|1 Samweli|2 Samweli|1 Wafalme|2 Wafalme|1 Mambo ya Nyakati|2 Mambo ya Nyakati|Ezra|Nehemia|Esta|Ayubu|Zaburi|Mithali|Mhubiri|Wimbo Ulio Bora|Isaya|Yeremia|Maombolezo|Ezekieli|Danieli|Hosea|Yoeli|Amosi|Obadia|Yona|Mika|Nahumu|Habakuki|Sefania|Hagai|Zekaria|Malaki|Mathayo|Marko|Luka|Yohana|Matendo ya Mitume|Warumi|1 Wakorintho|2 Wakorintho|Wagalatia|Waefeso|Wafilipi|Wakolosai|1 Wathesalonike|2 Wathesalonike|1 Timotheo|2 Timotheo|Tito|Filemoni|Waebrania|Yakobo|1 Petro|2 Petro|1 Yohana|2 Yohana|3 Yohana|Yuda|Ufunuo wa Yohana)\\s\\d+(:\\d+(-\\d+)?(,\\s*\\d+(:\\d+(-\\d+)?)*|,\\s*\\d+)*(\\s*,\\s*\\d+(:\\d+(-\\d+)?)*?)?)?\\s*;");
 
-    Matcher matcher = versePattern.matcher(mafungu);
+        Matcher matcher = versePattern.matcher(mafungu);
 
-    while (matcher.find()) {
-        int start = matcher.start();
-        int end = matcher.end();
-        String compVerse = mafungu.substring(start, end);
+        while (matcher.find()) {
+            int start = matcher.start();
+            int end = matcher.end();
+            String compVerse = mafungu.substring(start, end);
 
-        // Split the verse into segments based on commas and semicolons
-        String[] verseSegments = compVerse.split(";");
-        
-        // Iterate over each segment to apply spans
-        for (String segment : verseSegments) {
-            segment = segment.trim();
-            if (!segment.isEmpty()) {
-                String[] parts = segment.split(",\\s*");
+            // Split the verse into segments based on commas and semicolons
+            String[] verseSegments = compVerse.split(";");
 
-                for (String part : parts) {
-                    part = part.trim();
-                    int partStart = mafungu.indexOf(part, start);
-                    int partEnd = partStart + part.length();
-                    String fullVerse = segment.trim();
+            // Iterate over each segment to apply spans
+            for (String segment : verseSegments) {
+                segment = segment.trim();
+                if (!segment.isEmpty()) {
+                    String[] parts = segment.split(",\\s*");
 
-                    // Apply color and underline spans
-                    spannableString.setSpan(new ForegroundColorSpan(Color.BLUE), partStart, partEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    spannableString.setSpan(new UnderlineSpan(), partStart, partEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    for (String part : parts) {
+                        part = part.trim();
+                        int partStart = mafungu.indexOf(part, start);
+                        int partEnd = partStart + part.length();
+                        String fullVerse = segment.trim();
 
-                    // Apply clickable span
-                    final String verse = fullVerse; // Make the verse effectively final for the inner class
-                    spannableString.setSpan(new ClickableSpan() {
-                        @Override
-                        public void onClick(@NonNull View widget) {
-                            Toast.makeText(getApplicationContext(), verse, Toast.LENGTH_SHORT).show();       
-                            handleVerseClick(verse, partStart, partEnd);
-                        }
-                    }, partStart, partEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        // Apply color and underline spans
+                        spannableString.setSpan(
+                                new ForegroundColorSpan(Color.BLUE),
+                                partStart,
+                                partEnd,
+                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        spannableString.setSpan(
+                                new UnderlineSpan(),
+                                partStart,
+                                partEnd,
+                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+                        // Apply clickable span
+                        final String verse =
+                                fullVerse; // Make the verse effectively final for the inner class
+                        spannableString.setSpan(
+                                new ClickableSpan() {
+                                    @Override
+                                    public void onClick(@NonNull View widget) {
+                                        Toast.makeText(
+                                                        getApplicationContext(),
+                                                        verse,
+                                                        Toast.LENGTH_SHORT)
+                                                .show();
+                                        handleVerseClick(verse, partStart, partEnd);
+                                    }
+                                },
+                                partStart,
+                                partEnd,
+                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
                 }
             }
         }
+
+        return spannableString;
     }
 
-    return spannableString;
-}
- 
-    
-    
-private void handleVerseClick(String compVerse, int startIndex, int stopIndex) {
-    // Define default values
-    String book = "books/mwanzo.txt";
-    Integer chapter = 1;
-    Integer verse = 1;
-    Integer to = 1;
+    private void handleVerseClick(String compVerse, int startIndex, int stopIndex) {
+        // Define default values
+        String book = "books/mwanzo.txt";
+        Integer chapter = 1;
+        Integer verse = 1;
+        Integer to = 1;
 
-    // Remove duplicated book names
-    Pattern duplicatePattern = Pattern.compile("^(\\w+)(\\s\\1)+");
-    Matcher duplicateMatcher = duplicatePattern.matcher(compVerse);
-    if (duplicateMatcher.find()) {
-        compVerse = duplicateMatcher.replaceAll("$1");
-    }
-
-    // Trim spaces
-    compVerse = compVerse.trim();
-
-    // Split the input into segments based on commas
-    String[] segments = compVerse.split("\\s*,\\s*");
-
-    // Attach ":1" to segments without a verse
-    for (int i = 0; i < segments.length; i++) {
-        String segment = segments[i].trim();
-        if (!segment.contains(":") && segment.matches(".*\\d+")) {
-            segments[i] = segment + ":1";
+        // Remove duplicated book names
+        Pattern duplicatePattern = Pattern.compile("^(\\w+)(\\s\\1)+");
+        Matcher duplicateMatcher = duplicatePattern.matcher(compVerse);
+        if (duplicateMatcher.find()) {
+            compVerse = duplicateMatcher.replaceAll("$1");
         }
-    }
 
-    // Join the segments back into the compVerse string
-    compVerse = String.join(", ", segments);
+        // Trim spaces
+        compVerse = compVerse.trim();
 
-    // Initialize regex pattern for verse segments
-    Pattern pattern = Pattern.compile("^(.*?\\d*\\s*\\w+)(\\s(\\d+):(\\d+)(?:-(\\d+))?)?$");
+        // Split the input into segments based on commas
+        String[] segments = compVerse.split("\\s*,\\s*");
 
-    try {
-        for (String segment : segments) {
-            Matcher matcher = pattern.matcher(segment.trim());
+        // Attach ":1" to segments without a verse
+        for (int i = 0; i < segments.length; i++) {
+            String segment = segments[i].trim();
+            if (!segment.contains(":") && segment.matches(".*\\d+")) {
+                segments[i] = segment + ":1";
+            }
+        }
 
-            if (matcher.find()) {
-                String currentBook = matcher.group(1).toLowerCase().trim();
-                Integer currentChapter = matcher.group(3) != null ? Integer.parseInt(matcher.group(3).trim()) : chapter;
-                Integer currentVerse = matcher.group(4) != null ? Integer.parseInt(matcher.group(4).trim()) : 1;
-                Integer currentTo = matcher.group(5) != null ? Integer.parseInt(matcher.group(5).trim()) : currentVerse;
+        // Join the segments back into the compVerse string
+        compVerse = String.join(", ", segments);
 
-                // Check for comma-separated verses
-                if (segment.contains(",")) {
-                    String[] parts = segment.split(",");
-                    for (String part : parts) {
-                        Matcher partMatcher = pattern.matcher(part.trim());
-                        if (partMatcher.find()) {
-                            Integer partTo = partMatcher.group(5) != null ? Integer.parseInt(partMatcher.group(5).trim()) : null;
-                            if (partTo != null) {
-                                currentTo = Math.max(currentTo, partTo); // Update currentTo with the maximum value
+        // Initialize regex pattern for verse segments
+        Pattern pattern = Pattern.compile("^(.*?\\d*\\s*\\w+)(\\s(\\d+):(\\d+)(?:-(\\d+))?)?$");
+
+        try {
+            for (String segment : segments) {
+                Matcher matcher = pattern.matcher(segment.trim());
+
+                if (matcher.find()) {
+                    String currentBook = matcher.group(1).toLowerCase().trim();
+                    Integer currentChapter =
+                            matcher.group(3) != null
+                                    ? Integer.parseInt(matcher.group(3).trim())
+                                    : chapter;
+                    Integer currentVerse =
+                            matcher.group(4) != null
+                                    ? Integer.parseInt(matcher.group(4).trim())
+                                    : 1;
+                    Integer currentTo =
+                            matcher.group(5) != null
+                                    ? Integer.parseInt(matcher.group(5).trim())
+                                    : currentVerse;
+
+                    // Check for comma-separated verses
+                    if (segment.contains(",")) {
+                        String[] parts = segment.split(",");
+                        for (String part : parts) {
+                            Matcher partMatcher = pattern.matcher(part.trim());
+                            if (partMatcher.find()) {
+                                Integer partTo =
+                                        partMatcher.group(5) != null
+                                                ? Integer.parseInt(partMatcher.group(5).trim())
+                                                : null;
+                                if (partTo != null) {
+                                    currentTo =
+                                            Math.max(
+                                                    currentTo,
+                                                    partTo); // Update currentTo with the maximum
+                                                             // value
+                                }
                             }
                         }
                     }
+
+                    // Update chapter, verse, and to with the current values
+                    chapter = currentChapter;
+                    verse = currentVerse;
+                    to = currentTo;
+
+                    // Handle the case where the book name ends with a number but isn't supposed to
+                    if (!currentBook.isEmpty()
+                            && currentBook.matches(".*\\d$")
+                            && !currentBook.matches("^\\d.*")) {
+                        currentBook = currentBook.replaceAll("\\d+$", "").trim();
+                    }
+
+                    // Update the book if it's still the default
+                    if (book.equals("books/mwanzo.txt") && !currentBook.isEmpty()) {
+                        book = "books/" + currentBook + ".txt";
+                    }
+
+                    // Construct the full verse reference
+                    String fullVerse = segment.trim();
+                    if (!fullVerse.startsWith(currentBook)) {
+                        fullVerse = currentBook + " " + fullVerse;
+                    }
+
+                    // Display the extracted information for debugging
+                    Toast.makeText(
+                                    getApplicationContext(),
+                                    "Book: "
+                                            + book
+                                            + "\nChapter: "
+                                            + chapter
+                                            + "\nVerse: "
+                                            + verse
+                                            + "\nTo: "
+                                            + to,
+                                    Toast.LENGTH_LONG)
+                            .show();
+
+                    // Handle each segment (e.g., create spans, store ranges, etc.)
+                    // You can add your logic here to process each chapter and verse
+                } else {
+                    // Handle the case where the format does not match
+                    Toast.makeText(
+                                    getApplicationContext(),
+                                    "Error parsing verse: " + segment,
+                                    Toast.LENGTH_SHORT)
+                            .show();
                 }
-
-                // Update chapter, verse, and to with the current values
-                chapter = currentChapter;
-                verse = currentVerse;
-                to = currentTo;
-
-                // Handle the case where the book name ends with a number but isn't supposed to
-                if (!currentBook.isEmpty() && currentBook.matches(".*\\d$") && !currentBook.matches("^\\d.*")) {
-                    currentBook = currentBook.replaceAll("\\d+$", "").trim();
-                }
-
-                // Update the book if it's still the default
-                if (book.equals("books/mwanzo.txt") && !currentBook.isEmpty()) {
-                    book = "books/" + currentBook + ".txt";
-                }
-
-                // Construct the full verse reference
-                String fullVerse = segment.trim();
-                if (!fullVerse.startsWith(currentBook)) {
-                    fullVerse = currentBook + " " + fullVerse;
-                }
-
-                // Display the extracted information for debugging
-                Toast.makeText(getApplicationContext(), "Book: " + book + "\nChapter: " + chapter + "\nVerse: " + verse + "\nTo: " + to, Toast.LENGTH_LONG).show();
-
-                // Handle each segment (e.g., create spans, store ranges, etc.)
-                // You can add your logic here to process each chapter and verse
-            } else {
-                // Handle the case where the format does not match
-                Toast.makeText(getApplicationContext(), "Error parsing verse: " + segment, Toast.LENGTH_SHORT).show();
             }
+        } catch (Exception e) {
+            Toast.makeText(
+                            getApplicationContext(),
+                            "Error parsing verse: " + compVerse,
+                            Toast.LENGTH_LONG)
+                    .show();
         }
-    } catch (Exception e) {
-        Toast.makeText(getApplicationContext(), "Error parsing verse: " + compVerse, Toast.LENGTH_LONG).show();
+
+        // Start the Bible_Read activity with the extracted information
+        Intent bible = new Intent(getApplicationContext(), Bible_Read.class);
+        ArrayList<Integer> StartStop = bible_Chapters(book, chapter);
+        bible.putExtra("chapter", book + " " + chapter);
+        bible.putExtra("startVerse", StartStop.get(0));
+        bible.putExtra("stopVerse", StartStop.get(1));
+        bible.putExtra("bookName", book);
+        startActivity(bible);
     }
 
-    // Start the Bible_Read activity with the extracted information
-    Intent bible = new Intent(getApplicationContext(), Bible_Read.class);
-    ArrayList<Integer> StartStop = bible_Chapters(book, chapter);
-    bible.putExtra("chapter", book + " " + chapter);
-    bible.putExtra("startVerse", StartStop.get(0));
-    bible.putExtra("stopVerse", StartStop.get(1));
-    bible.putExtra("bookName", book);
-    startActivity(bible);
-}
- 
- private void cannotOpen() {
- 	Intent intent = new Intent(getApplicationContext(), bible.class);
-     startActivity(intent);   
- }    
-    
-    
+    private void cannotOpen() {
+        Intent intent = new Intent(getApplicationContext(), bible.class);
+        startActivity(intent);
+    }
 }

@@ -113,6 +113,20 @@
             app:layout_constraintEnd_toEndOf="parent"
             android:layout_marginTop="8dp"
             app:layout_constraintTop_toBottomOf="@+id/saturday_image"/>
+        
+            <!-- Button for "Maongezi ya Mwalimu" -->
+        <ToggleButton
+            android:id="@+id/maongezi_mwalimu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/rounded_toggle_corners"
+            android:textOff="Mwongozo wa Waalimu"
+            android:textOn="Rudi kwa lesoni"
+            android:layout_marginTop="16dp"
+            android:padding="5px"
+            app:layout_constraintTop_toBottomOf="@+id/paragraph_container"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.cardview.widget.CardView>

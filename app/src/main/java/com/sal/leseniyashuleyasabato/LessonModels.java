@@ -9,7 +9,8 @@ public class LessonModels {
     private final String day_title;
     private final int share_image;
     private final String saturday_image_uri;
-
+    
+    
     public LessonModels(String date, String dateEng, String weekRange, int share_image, String day_title, String day_content, String day_question, String saturday_image_uri) {
         this.date = date;
         this.dateEng = dateEng;

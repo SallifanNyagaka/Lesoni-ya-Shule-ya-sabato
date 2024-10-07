@@ -1,6 +1,14 @@
 package com.sal.leseniyashuleyasabato;
 
+import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.ToggleButton;
+import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.SetOptions;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.sal.leseniyashuleyasabato.R;
 import android.content.BroadcastReceiver;
 import android.content.SharedPreferences;
@@ -21,6 +29,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import androidx.appcompat.app.AlertDialog;
 import com.google.firebase.firestore.FirebaseFirestore;
+import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Locale;
 import android.content.Context;
@@ -58,25 +67,17 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
     private Context context;
     private TextToSpeech textToSpeech;
     String tray = "gjjhggdzxjj";
+    public  String teacher = "days";
+    String teacherPathName;
+    String lessonPathName;
+    
     private Map<Integer, List<String>> commentsMap = new HashMap<>();
     
-    private static final String[] TERMS_TO_BOLD = {
-    "Sehemu ya III: Matumizi maishani",
-    "Sehemu ya II: Ufafanuzi",
-    "Muhtasari",
-    "Maswali ya Kujadili",
-    "Jifunze zaidi",
-    "Kisa cha ndani",
-    "Somo la juma hili",
-    "Fungu la Kukariri",
-    "Sabato Mchana",
-    "Soma",
-    "Fungu kuu",
-    "Kiini cha somo"
-};
-    public Adapter(List<LessonModels> days, Context context) {
+    public Adapter(List<LessonModels> days, Context context, String teacherPathName, String lessonPathName) {
         this.days = days;
         this.context = context;
+        this.teacherPathName = teacherPathName;
+        this.lessonPathName = lessonPathName;
     }
 
     @NonNull
@@ -164,12 +165,63 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
                                         }
                                     });
                 });
+        
+        
+        // Set an OnCheckedChangeListener to handle toggle button state changes
+        holder.maongezi_mwalimu.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    teacher = "teacher";  // Switch the collection name to "teacher"
+                    fetchNewDataFromFirestore(teacherPathName);  // Fetch new data from Firestore
+                } else {
+                    teacher = "days";
+                    fetchNewDataFromFirestore(lessonPathName);
+                    holder.maongezi_mwalimu.setText("Rudi kwa Lesoni");        
+                }
+            }
+        });
     }
+    
 
     @Override
     public int getItemCount() {
         return this.days.size();
     }
+    
+    private void fetchNewDataFromFirestore(String pathName) {
+    FirebaseFirestore db = FirebaseFirestore.getInstance();
+    CollectionReference lessonsRef = db.collection(pathName); // Use the predefined pathName
+
+    // Get all documents in the collection
+    lessonsRef.get().addOnCompleteListener(task -> {
+        if (task.isSuccessful()) {
+            days.clear(); // Clear the existing list before adding new data
+            for (QueryDocumentSnapshot document : task.getResult()) {
+                // Check if the document exists
+                if (document.exists()) {
+                    // Retrieve data from the document
+                    String day = document.getString("date");
+                    String dateEng = document.getString("dateEng");
+                    String weekRange = document.getString("weekDateRange");
+                    int shareImage = R.drawable.share_today; // Replace with appropriate drawable resource if necessary
+                    String day_title = document.getString("title");
+                    String day_content = document.getString("content");
+                    String day_question = document.getString("question");
+                    String image_Uri = document.getString("image_url");
+
+                    // Create a new LessonModels object and add it to the list
+                    days.add(new LessonModels(day, dateEng, weekRange, shareImage, day_title, day_content, day_question, image_Uri));
+                } else {
+                    Log.w("Firestore", "Document does not exist: " + document.getId());
+                }
+            }
+            notifyDataSetChanged(); // Notify the adapter that data has changed
+        } else {
+            Log.w("Firestore", "Error getting documents: ", task.getException());
+        }
+    });
+}
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         private final Context context;
@@ -181,6 +233,7 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
         private final TextView day_title;
         private final ImageView share_image;
         private final ImageView saturday_image, ic_tts;
+        private final ToggleButton maongezi_mwalimu;
 
         public ViewHolder(View itemView, Context context) { // Constructor receives the context
             super(itemView);
@@ -194,6 +247,7 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
             this.share_image = itemView.findViewById(R.id.day_share);
             this.ic_tts = itemView.findViewById(R.id.ic_tts);
             this.saturday_image = itemView.findViewById(R.id.saturday_image);
+            this.maongezi_mwalimu = itemView.findViewById(R.id.maongezi_mwalimu);
         }
     }
 
@@ -533,77 +587,83 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
 
     // Method to show color picker dialog
     private void showColorPickerDialog(
-            TextView tvParagraph,
-            String weekId,
-            int position,
-            int paragraphIndex,
-            int start,
-            int end) {
-        // Define the colors with 50% opacity
-        final int[] colors = {
-            Color.argb(128, 255, 0, 0), // Red
-            Color.argb(128, 0, 255, 0), // Green
-            Color.argb(128, 0, 0, 255), // Blue
-            Color.argb(128, 255, 255, 0), // Yellow
-            Color.argb(128, 255, 165, 0), // Orange
-            Color.argb(128, 128, 0, 128), // Purple
-            Color.argb(128, 255, 192, 203) // Pink
-        };
+        TextView tvParagraph,
+        String weekId,
+        int position,
+        int paragraphIndex,
+        int start,
+        int end) {
+    // Define the colors with 50% opacity
+    final int[] colors = {
+        Color.argb(128, 255, 0, 0), // Red
+        Color.argb(128, 0, 255, 0), // Green
+        Color.argb(128, 0, 0, 255), // Blue
+        Color.argb(128, 255, 255, 0), // Yellow
+        Color.argb(128, 255, 165, 0), // Orange
+        Color.argb(128, 128, 0, 128), // Purple
+        Color.argb(128, 255, 192, 203) // Pink
+    };
 
-        // Create an AlertDialog to show color options
-        AlertDialog.Builder builder = new AlertDialog.Builder(tvParagraph.getContext());
-        builder.setTitle("Choose a highlight color");
+    // Create an AlertDialog to show color options
+    AlertDialog.Builder builder = new AlertDialog.Builder(tvParagraph.getContext());
+    builder.setTitle("Choose a highlight color");
 
-        // Create a layout for the dialog
-        LinearLayout layout = new LinearLayout(tvParagraph.getContext());
-        layout.setOrientation(LinearLayout.VERTICAL);
+    // Create a layout for the dialog
+    LinearLayout layout = new LinearLayout(tvParagraph.getContext());
+    layout.setOrientation(LinearLayout.VERTICAL);
 
-        // Create color buttons
-        for (int color : colors) {
-            View colorView = new View(tvParagraph.getContext());
-            colorView.setBackgroundColor(color);
-            colorView.setLayoutParams(
-                    new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 100));
-            colorView.setOnClickListener(
-                    v -> {
-                        // Highlight the selected text with the chosen color
-                        Spannable spannable = (Spannable) tvParagraph.getText();
-                        spannable.setSpan(
-                                new BackgroundColorSpan(color),
+    // Create the AlertDialog and store a reference
+    AlertDialog dialog = builder.create();
+
+    // Create color buttons
+    for (int color : colors) {
+        View colorView = new View(tvParagraph.getContext());
+        colorView.setBackgroundColor(color);
+        colorView.setLayoutParams(
+                new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 100));
+        colorView.setOnClickListener(
+                v -> {
+                    // Highlight the selected text with the chosen color
+                    Spannable spannable = (Spannable) tvParagraph.getText();
+                    spannable.setSpan(
+                            new BackgroundColorSpan(color),
+                            start,
+                            end,
+                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+                    // Save the highlight with the chosen color
+                    saveHighlight(weekId, position, paragraphIndex, start, end, color);
+
+                    if (isConnected()) {
+                        saveHighlightToFirestore(
+                                weekId,
+                                position,
+                                paragraphIndex,
+                                getUserEmail(),
                                 start,
                                 end,
-                                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                                color);
+                    } else {
+                        saveOfflineHighlight(
+                                getUserEmail(),
+                                weekId,
+                                position,
+                                paragraphIndex,
+                                start,
+                                end,
+                                color);
+                    }
 
-                        // Save the highlight with the chosen color
-                        saveHighlight(weekId, position, paragraphIndex, start, end, color);
-
-                        if (isConnected()) {
-                            saveHighlightToFirestore(
-                                    weekId,
-                                    position,
-                                    paragraphIndex,
-                                    getUserEmail(),
-                                    start,
-                                    end,
-                                    color);
-                        } else {
-                            saveOfflineHighlight(
-                                    getUserEmail(),
-                                    weekId,
-                                    position,
-                                    paragraphIndex,
-                                    start,
-                                    end,
-                                    color);
-                        }
-                    });
-            layout.addView(colorView);
-        }
-
-        builder.setView(layout);
-        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
-        builder.show();
+                    // Dismiss the dialog after color selection
+                    dialog.dismiss();
+                });
+        layout.addView(colorView);
     }
+
+    dialog.setView(layout);
+    dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Cancel", (dialogInterface, which) -> dialog.dismiss());
+    dialog.show();
+}
     
 private void saveOfflineHighlight(
         String userEmail,
