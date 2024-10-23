@@ -8,119 +8,141 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <androidx.constraintlayout.widget.ConstraintLayout 
-        android:layout_width="match_parent" 
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <ScrollView
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            android:layout_height="match_parent">
 
-            <androidx.constraintlayout.widget.ConstraintLayout
+            <ScrollView
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="16dp">
+                android:layout_height="match_parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
 
-                <androidx.appcompat.widget.Toolbar
-                    android:id="@+id/action_bar"
+                <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:elevation="4dp"
-                    android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintHorizontal_bias="0.0"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+                    android:padding="16dp">
 
-                <Spinner
-                    android:id="@+id/quarterWeeks"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="?android:attr/windowBackground"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/weekTitle" />
+                    <androidx.appcompat.widget.Toolbar
+                        android:id="@+id/action_bar"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:elevation="4dp"
+                        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintHorizontal_bias="0.0"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
 
-                <TextView
-                    android:id="@+id/weekTitle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/day_title"
-                    android:textStyle="bold"
-                    android:background="@color/red"
-                    android:textAlignment="center"
-                    android:textColor="?android:attr/textColorPrimary"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/action_bar" />
+                    <Spinner
+                        android:id="@+id/quarterWeeks"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="?android:attr/textColorPrimary"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/weekTitle" />
 
-                <ImageView
-                    android:id="@+id/quarter_image"
-                    android:layout_width="match_parent"
-                    android:layout_height="200dp"
-                    android:contentDescription="@string/illustration_image"
-                    android:scaleType="centerCrop"
-                    android:src="@drawable/lesson"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/quarterWeeks"
-                    android:layout_marginTop="8dp"/>
-                
-                <TextView
-                    android:id="@+id/utangulizi"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Utangulizi"
-                    android:textStyle="bold"
-                    android:textSize="5pt"
-                    android:textAlignment="center"
-                    android:textColor="?android:attr/textColorPrimary"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/quarter_image"
-                    android:layout_marginTop="8dp"/>
+                    <TextView
+                        android:id="@+id/weekTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/day_title"
+                        android:textStyle="bold"
+                        android:background="@color/red"
+                        android:textAlignment="center"
+                        android:textColor="?android:attr/textColorPrimary"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/action_bar" />
 
-                <TextView
-                    android:id="@+id/verses"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/verses"
-                    android:maxLines="3"
-                    android:textAlignment="center"
-                    android:textColor="?android:attr/textColorPrimary"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/utangulizi"
-                    android:layout_marginTop="0dp"/>
-                
-                <Button
+                    <ImageView
+                        android:id="@+id/quarter_image"
+                        android:layout_width="match_parent"
+                        android:layout_height="200dp"
+                        android:contentDescription="@string/illustration_image"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/lesson"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/quarterWeeks"
+                        android:layout_marginTop="8dp"/>
+
+                    <TextView
+                        android:id="@+id/utangulizi"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Utangulizi"
+                        android:textStyle="bold"
+                        android:textSize="5pt"
+                        android:textAlignment="center"
+                        android:textColor="?android:attr/textColorPrimary"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/quarter_image"
+                        android:layout_marginTop="8dp"/>
+
+                    <TextView
+                        android:id="@+id/verses"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/verses"
+                        android:maxLines="3"
+                        android:textAlignment="center"
+                        android:textColor="?android:attr/textColorPrimary"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/utangulizi"
+                        android:layout_marginTop="0dp"/>
+
+                    <Button
                         android:id="@+id/btnToggle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="soma zaidi"
                         app:layout_constraintTop_toBottomOf="@id/verses"
                         app:layout_constraintEnd_toEndOf="@id/verses"
-                        app:layout_constraintStart_toStartOf="@id/verses"/>
+                        app:layout_constraintStart_toStartOf="@id/verses" />
 
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/wk_day"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/btnToggle"
+                        android:layout_marginTop="8dp"/>
 
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/wk_day"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/btnToggle"
-                    android:layout_marginTop="8dp"/>
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </ScrollView>
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
-            </androidx.constraintlayout.widget.ConstraintLayout>
-        </ScrollView>
-    </androidx.constraintlayout.widget.ConstraintLayout>
+        <!-- Floating Action Button for quick action -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/scrollRight"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="16dp"
+            android:src="@drawable/ic_arrow_right" />
+            
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/scrollLeft"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|start"
+            android:layout_margin="16dp"
+            android:src="@drawable/ic_arrow_left" />
+
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
     <com.google.android.material.navigation.NavigationView
         android:layout_gravity="start"
@@ -129,4 +151,5 @@
         android:layout_height="match_parent"
         app:headerLayout="@layout/nav_header"
         app:menu="@menu/navigation_drawer"/>
+
 </androidx.drawerlayout.widget.DrawerLayout>

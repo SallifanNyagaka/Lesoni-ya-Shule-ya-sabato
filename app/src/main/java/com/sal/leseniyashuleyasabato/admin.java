@@ -311,7 +311,6 @@ protected void onActivityResult(int requestCode, int resultCode, @Nullable Inten
     if (resultCode == RESULT_OK) {
         if (requestCode == UCrop.REQUEST_CROP) {
             final Uri resultUri = UCrop.getOutput(data);
-            QURI = resultUri;    
             imageUri = resultUri;
             if (resultUri != null) {
                 try {
@@ -328,8 +327,14 @@ protected void onActivityResult(int requestCode, int resultCode, @Nullable Inten
             }
         } else if (requestCode == REQUEST_IMAGE_SELECT && data != null) {
             Uri selectedImageUri = data.getData();
+                
+            if(isquarterImage){
+                QURI = data.getData();
+                loadImageWithoutCropping(QURI);    
+            }  
+                  
             imageUri = selectedImageUri;    
-            QURI = selectedImageUri;    
+               
             if (selectedImageUri != null) {
                 // Decide whether to crop or directly load the image
                 if (isContent) {
@@ -442,6 +447,7 @@ private void startCrop(Uri uri) {
             final Map<String, Object> wk_Title = new HashMap<>();
             wk_Title.put("week_Title", title);
             wk_Title.put("timeStamp", timestamp);
+            wk_Title.put("weekDateRange", weekContentRange);
             weekRef.set(wk_Title);
         }
         

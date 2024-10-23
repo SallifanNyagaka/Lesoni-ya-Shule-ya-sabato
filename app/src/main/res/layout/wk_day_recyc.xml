@@ -98,6 +98,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:visibility="gone"
+            android:layout_marginTop="20dp"
             android:contentDescription="SaturdayImage"
             app:layout_constraintTop_toBottomOf="@+id/day_title"
             app:layout_constraintStart_toStartOf="parent"

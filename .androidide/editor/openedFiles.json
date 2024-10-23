@@ -1,17 +1,47 @@
 {
   "allFiles": [
     {
+      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/res/layout/activity_main.xml",
+      "selection": {
+        "end": {
+          "column": 52,
+          "index": 7351,
+          "line": 142
+        },
+        "start": {
+          "column": 9,
+          "index": 6626,
+          "line": 128
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/build.gradle",
+      "selection": {
+        "end": {
+          "column": 63,
+          "index": 923,
+          "line": 36
+        },
+        "start": {
+          "column": 63,
+          "index": 923,
+          "line": 36
+        }
+      }
+    },
+    {
       "file": "/storage/emulated/0/AndroidIDEProjects/leson/LeseniyaShuleyasabato/app/src/main/java/com/sal/leseniyashuleyasabato/MainActivity.java",
       "selection": {
         "end": {
-          "column": 28,
-          "index": 4827,
-          "line": 128
+          "column": 93,
+          "index": 21430,
+          "line": 375
         },
         "start": {
-          "column": 28,
-          "index": 4827,
-          "line": 128
+          "column": 93,
+          "index": 21430,
+          "line": 375
         }
       }
     }

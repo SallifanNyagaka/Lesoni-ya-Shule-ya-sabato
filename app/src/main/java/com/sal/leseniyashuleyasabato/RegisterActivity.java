@@ -22,6 +22,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.sal.leseniyashuleyasabato.dialogwindow;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -215,10 +216,10 @@ public class RegisterActivity extends AppCompatActivity {
                         startActivity(intent);
                         finish();
                     }else {
-                        // User is already registered, navigate to main content
-                        Intent intent = new Intent(RegisterActivity.this, MainActivity.class);
-                        startActivity(intent);
-                        finish();
+                        String English = "\n\nEnglish\nEnsure your Email is correct. If correct, check your password. The password should be the original password used for your email.";   
+                        String Kiswahili = "Kiswahili\nAngalia Baruapepe yako. Ikiwa iko sawa, Hakikisha Nenosiri li sawa. Neno siri lazima liwe lile ambalo ni la barua pepe yako.";             
+                        dialogwindow.showErrorDialog(RegisterActivity.this, "Hitilafu/Error", Kiswahili+English);
+                               
                     }
                 
                 });

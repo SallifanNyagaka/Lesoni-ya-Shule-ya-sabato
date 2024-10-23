@@ -5,6 +5,7 @@ import android.widget.CompoundButton;
 import android.widget.ToggleButton;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.SetOptions;
 import com.google.gson.Gson;
@@ -193,8 +194,8 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
     FirebaseFirestore db = FirebaseFirestore.getInstance();
     CollectionReference lessonsRef = db.collection(pathName); // Use the predefined pathName
 
-    // Get all documents in the collection
-    lessonsRef.get().addOnCompleteListener(task -> {
+    // Get all documents in the collection ordered by 'timestamp'
+    lessonsRef.orderBy("timeStamp", Query.Direction.ASCENDING).get().addOnCompleteListener(task -> {
         if (task.isSuccessful()) {
             days.clear(); // Clear the existing list before adding new data
             for (QueryDocumentSnapshot document : task.getResult()) {
@@ -212,6 +213,7 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
 
                     // Create a new LessonModels object and add it to the list
                     days.add(new LessonModels(day, dateEng, weekRange, shareImage, day_title, day_content, day_question, image_Uri));
+                            
                 } else {
                     Log.w("Firestore", "Document does not exist: " + document.getId());
                 }

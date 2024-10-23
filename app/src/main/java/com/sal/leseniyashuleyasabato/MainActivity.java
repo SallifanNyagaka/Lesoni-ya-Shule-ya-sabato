@@ -125,9 +125,8 @@ public class MainActivity extends AppCompatActivity
     private TextToSpeech textToSpeech;
     private boolean isExpanded = false;
     BroadcastReceiver networkReceiver;
-    String teacherPathName = "quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + "WK-1" + "/"+ "teacher";
-    String lessonPathName = "quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + "WK-1" + "/"+ "days";
-
+    ArrayList<Integer> spin = new ArrayList<>();
+    
 
     /* JADX INFO: Access modifiers changed from: protected */
     @Override // androidx.fragment.app.FragmentActivity, androidx.activity.ComponentActivity,
@@ -265,9 +264,257 @@ public class MainActivity extends AppCompatActivity
                         }
                     });
 
-            initDays();
-            // lesson_init(lesson_adapter.teacher);
+            //Recyclerview Init from firebase
+            
+            try {
+            this.lesson_days = new ArrayList<>();
+            
+            try {
+                // Use a Set to ensure unique titles
+                HashSet<String> titles = new HashSet<>();
 
+                // Show a progress indicator while fetching data
+                // ... (e.g., show a progress bar or disable UI elements)
+
+                db.collection("quarters_" + year)
+                        .document(Quarter()) // Assuming Quarter() returns the current quarter
+                        .collection("weeks")
+                        .orderBy("timeStamp", Query.Direction.ASCENDING)
+                        .get()
+                        .addOnSuccessListener(
+                                new OnSuccessListener<QuerySnapshot>() {
+                                    @Override
+                                    public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                                        for (QueryDocumentSnapshot weekSnapshot :
+                                                queryDocumentSnapshots) {
+                                            String weekDateRange =
+                                                    weekSnapshot.getString("weekDateRange");
+                                            String title = weekSnapshot.getId() +":\n\n"+ weekSnapshot.getString("week_Title") +"\n"+ weekSnapshot.getString("weekDateRange");
+                                            if (title != null) {
+                                                titles.add(title);
+                                            } else {
+                                                // Handle cases where the "title" field is missing
+                                                // Log an error or display a warning message
+                                                // ...
+                                            }
+                                        }
+
+                                        // Hide the progress indicator
+                                        // ...
+
+                                        // Populate the spinner with unique titles
+                                        ArrayAdapter<String> weekTitles =
+                                                new ArrayAdapter<>(
+                                                        MainActivity.this,
+                                                        android.R.layout
+                                                                .simple_spinner_dropdown_item,
+                                                        new ArrayList<>(titles));
+                                       QWeeks.setAdapter(weekTitles);
+
+                                        QWeeks.setOnItemSelectedListener(
+                                                new AdapterView.OnItemSelectedListener() {
+                                                    @Override
+                                                    public void onItemSelected(
+                                                            AdapterView<?> adapterView,
+                                                            View view,
+                                                            int position,
+                                                            long id) {
+                                                        spin.clear();
+                                                        spin.add(position+1);
+                                                        String selectedTitle =
+                                                                adapterView
+                                                                        .getItemAtPosition(position)
+                                                                        .toString();
+                                                        
+                                                        db.collection(
+                                                                        "quarters_"
+                                                                                + year
+                                                                                        .toString()) // Full path reference to quarters
+                                                                .document(Quarter())
+                                                                .collection("weeks")
+                                                                .get()
+                                                                .addOnSuccessListener(
+                                                                        new OnSuccessListener<
+                                                                                QuerySnapshot>() {
+                                                                            @Override
+                                                                            public void onSuccess(
+                                                                                    QuerySnapshot
+                                                                                            queryDocumentSnapshots) {
+                                                                                for (QueryDocumentSnapshot
+                                                                                        snapshot :
+                                                                                                queryDocumentSnapshots) {
+                                                                                    if (selectedTitle
+                                                                                            . contains(
+                                                                                                    snapshot
+                                                                                                            .getString(
+                                                                                                                    "week_Title"))) {
+                                                                                        lesson_days
+                                                                                                .clear();
+                                                                                        db.collection(
+                                                                                                        "quarters_"
+                                                                                                                + year
+                                                                                                                        .toString()) // Full path reference to the specific week
+                                                                                                .document(
+                                                                                                        Quarter())
+                                                                                                .collection(
+                                                                                                        "weeks")
+                                                                                                .document(
+                                                                                                        snapshot
+                                                                                                                .getId())
+                                                                                                .collection(
+                                                                                                        "days")
+                                                                                                .orderBy(
+                                                                                                        "timeStamp",
+                                                                                                        Query
+                                                                                                                .Direction
+                                                                                                                .ASCENDING)
+                                                                                                .get()
+                                                                                                .addOnSuccessListener(
+                                                                                                        new OnSuccessListener<
+                                                                                                                QuerySnapshot>() {
+                                                                                                            @Override
+                                                                                                            public
+                                                                                                            void
+                                                                                                                    onSuccess(
+                                                                                                                            QuerySnapshot
+                                                                                                                                    queryDocumentSnapshots) {
+                                                                                                                for (QueryDocumentSnapshot
+                                                                                                                        snapshot2 :
+                                                                                                                                queryDocumentSnapshots) {
+                                                                                                                    String
+                                                                                                                            days =
+                                                                                                                                    snapshot2
+                                                                                                                                            .getString(
+                                                                                                                                                    "date");
+                                                                                                                    String
+                                                                                                                            day_title =
+                                                                                                                                    snapshot2
+                                                                                                                                            .getString(
+                                                                                                                                                    "title");
+                                                                                                                    String
+                                                                                                                            day_content =
+                                                                                                                                    snapshot2
+                                                                                                                                            .getString(
+                                                                                                                                                    "content");
+                                                                                                                    String
+                                                                                                                            day_question =
+                                                                                                                                    snapshot2
+                                                                                                                                            .getString(
+                                                                                                                                                    "question");
+                                                                                                                    String
+                                                                                                                            image_Uri =
+                                                                                                                                    snapshot2
+                                                                                                                                            .getString(
+                                                                                                                                                    "image_url");
+                                                                                                                    String
+                                                                                                                            dateEng =
+                                                                                                                                    snapshot2
+                                                                                                                                            .getString(
+                                                                                                                                                    "dateEng");
+                                                                                                                    String
+                                                                                                                            weekRange =
+                                                                                                                                    snapshot2
+                                                                                                                                            .getString(
+                                                                                                                                                    "weekDateRange");
+                                                                                                                    lesson_days
+                                                                                                                            .add(
+                                                                                                                                    new LessonModels(
+                                                                                                                                            days,
+                                                                                                                                            dateEng,
+                                                                                                                                            weekRange,
+                                                                                                                                            R
+                                                                                                                                                    .drawable
+                                                                                                                                                    .share_today,
+                                                                                                                                            day_title,
+                                                                                                                                            day_content,
+                                                                                                                                            day_question,
+                                                                                                                                            image_Uri));
+                                                                                                                }
+                                                                                                                lesson_adapter
+                                                                                                                        .notifyDataSetChanged();
+                                                                                                            }
+                                                                                                        });
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        })
+                                                                .addOnFailureListener(
+                                                                        new OnFailureListener() {
+                                                                            @Override
+                                                                            public void onFailure(
+                                                                                    @NonNull
+                                                                                            Exception
+                                                                                                    e) {
+                                                                                Toast.makeText(
+                                                                                                MainActivity
+                                                                                                        .this,
+                                                                                                "Failed to load Content: "
+                                                                                                        + e
+                                                                                                                .getMessage(),
+                                                                                                Toast
+                                                                                                        .LENGTH_LONG)
+                                                                                        .show();
+                                                                            }
+                                                                        });
+                                            
+                                            
+                                                    }
+
+                                                    @Override
+                                                    public void onNothingSelected(
+                                                            AdapterView<?> adapterView) {
+                                                        // Handle the case where nothing is selected
+                                                        // ...
+                                                    }
+                                                });
+                                    }
+                                })
+                        .addOnFailureListener(
+                                new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                        // Hide the progress indicator
+                                        // ...
+
+                                        Toast.makeText(
+                                                        MainActivity.this,
+                                                        "Failed to load quarters: "
+                                                                + e.getMessage(),
+                                                        Toast.LENGTH_LONG)
+                                                .show();
+                                        // Log the error for debugging
+                                        // ...
+                                    }
+                                });
+            } catch (Exception err) {
+                Toast.makeText(
+                                getApplicationContext(),
+                                "lessonInit() " + err.toString(),
+                                Toast.LENGTH_SHORT)
+                        .show();
+                // Log the error for debugging
+                // ...
+            }
+
+            int spinPosition = 1;    
+            String teacherPathName = "quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + "WK-"+spinPosition+ "/"+ "teacher";
+            String lessonPathName = "quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + "WK-"+spinPosition+ "/"+ "days";    
+            this.lesson_adapter =new Adapter(this.lesson_days, this, teacherPathName, lessonPathName);
+            this.day = findViewById(R.id.wk_day);
+            this.wk_day_manager = new LinearLayoutManager(getApplicationContext());
+            this.day.setAdapter(this.lesson_adapter);
+            this.day.setLayoutManager(this.wk_day_manager);
+        } catch (Exception err) {
+            Toast.makeText(
+                            getApplicationContext(),
+                            "initDays() " + err.toString(),
+                            Toast.LENGTH_SHORT)
+                    .show();
+        }
+            
+            //Recyclerview complete
+
+            
             IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
             networkReceiver =
                     new BroadcastReceiver() {
@@ -414,389 +661,8 @@ public class MainActivity extends AppCompatActivity
 
     private void initDays() {
 
-        try {
-            this.lesson_days = new ArrayList<>();
-            
-            try {
-                // Use a Set to ensure unique titles
-                HashSet<String> titles = new HashSet<>();
-
-                // Show a progress indicator while fetching data
-                // ... (e.g., show a progress bar or disable UI elements)
-
-                db.collection("quarters_" + year)
-                        .document(Quarter()) // Assuming Quarter() returns the current quarter
-                        .collection("weeks")
-                        .orderBy("timeStamp", Query.Direction.ASCENDING)
-                        .get()
-                        .addOnSuccessListener(
-                                new OnSuccessListener<QuerySnapshot>() {
-                                    @Override
-                                    public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
-                                        for (QueryDocumentSnapshot weekSnapshot :
-                                                queryDocumentSnapshots) {
-                                            String weekDateRange =
-                                                    weekSnapshot.getString("weekDateRange");
-                                            String title = weekSnapshot.getString("week_Title");
-                                            if (title != null) {
-                                                titles.add(title);
-                                            } else {
-                                                // Handle cases where the "title" field is missing
-                                                // Log an error or display a warning message
-                                                // ...
-                                            }
-                                        }
-
-                                        // Hide the progress indicator
-                                        // ...
-
-                                        // Populate the spinner with unique titles
-                                        ArrayAdapter<String> weekTitles =
-                                                new ArrayAdapter<>(
-                                                        MainActivity.this,
-                                                        android.R.layout
-                                                                .simple_spinner_dropdown_item,
-                                                        new ArrayList<>(titles));
-                                        QWeeks.setAdapter(weekTitles);
-
-                                        QWeeks.setOnItemSelectedListener(
-                                                new AdapterView.OnItemSelectedListener() {
-                                                    @Override
-                                                    public void onItemSelected(
-                                                            AdapterView<?> adapterView,
-                                                            View view,
-                                                            int position,
-                                                            long id) {
-                                                        String selectedTitle =
-                                                                adapterView
-                                                                        .getItemAtPosition(position)
-                                                                        .toString();
-                                                        db.collection(
-                                                                        "quarters_"
-                                                                                + year
-                                                                                        .toString()) // Full path reference to quarters
-                                                                .document(Quarter())
-                                                                .collection("weeks")
-                                                                .get()
-                                                                .addOnSuccessListener(
-                                                                        new OnSuccessListener<
-                                                                                QuerySnapshot>() {
-                                                                            @Override
-                                                                            public void onSuccess(
-                                                                                    QuerySnapshot
-                                                                                            queryDocumentSnapshots) {
-                                                                                for (QueryDocumentSnapshot
-                                                                                        snapshot :
-                                                                                                queryDocumentSnapshots) {
-                                                                                    if (selectedTitle
-                                                                                            .equals(
-                                                                                                    snapshot
-                                                                                                            .getString(
-                                                                                                                    "week_Title"))) {
-                                                                                        lesson_days
-                                                                                                .clear();
-                                                                                        db.collection(
-                                                                                                        "quarters_"
-                                                                                                                + year
-                                                                                                                        .toString()) // Full path reference to the specific week
-                                                                                                .document(
-                                                                                                        Quarter())
-                                                                                                .collection(
-                                                                                                        "weeks")
-                                                                                                .document(
-                                                                                                        snapshot
-                                                                                                                .getId())
-                                                                                                .collection(
-                                                                                                        "days")
-                                                                                                .orderBy(
-                                                                                                        "timeStamp",
-                                                                                                        Query
-                                                                                                                .Direction
-                                                                                                                .ASCENDING)
-                                                                                                .get()
-                                                                                                .addOnSuccessListener(
-                                                                                                        new OnSuccessListener<
-                                                                                                                QuerySnapshot>() {
-                                                                                                            @Override
-                                                                                                            public
-                                                                                                            void
-                                                                                                                    onSuccess(
-                                                                                                                            QuerySnapshot
-                                                                                                                                    queryDocumentSnapshots) {
-                                                                                                                teacherPathName =
-                                                                                                                        "quarters_"
-                                                                                                                                + year
-                                                                                                                                        .toString()
-                                                                                                                                + "/"
-                                                                                                                                + Quarter()
-                                                                                                                                + "/"
-                                                                                                                                + "weeks"
-                                                                                                                                + "/"
-                                                                                                                                + snapshot.getId()
-                                                                                                                                        .toString()
-                                                                                                                                + "/"
-                                                                                                                                + "teacher";
-                                                                                                                lessonPathName =
-                                                                                                                        "quarters_"
-                                                                                                                                + year
-                                                                                                                                        .toString()
-                                                                                                                                + "/"
-                                                                                                                                + Quarter()
-                                                                                                                                + "/"
-                                                                                                                                + "weeks"
-                                                                                                                                + "/"
-                                                                                                                                + snapshot.getId()
-                                                                                                                                        .toString()
-                                                                                                                                + "/"
-                                                                                                                                + "days";
-                                                                                                                for (QueryDocumentSnapshot
-                                                                                                                        snapshot2 :
-                                                                                                                                queryDocumentSnapshots) {
-                                                                                                                    String
-                                                                                                                            days =
-                                                                                                                                    snapshot2
-                                                                                                                                            .getString(
-                                                                                                                                                    "date");
-                                                                                                                    String
-                                                                                                                            day_title =
-                                                                                                                                    snapshot2
-                                                                                                                                            .getString(
-                                                                                                                                                    "title");
-                                                                                                                    String
-                                                                                                                            day_content =
-                                                                                                                                    snapshot2
-                                                                                                                                            .getString(
-                                                                                                                                                    "content");
-                                                                                                                    String
-                                                                                                                            day_question =
-                                                                                                                                    snapshot2
-                                                                                                                                            .getString(
-                                                                                                                                                    "question");
-                                                                                                                    String
-                                                                                                                            image_Uri =
-                                                                                                                                    snapshot2
-                                                                                                                                            .getString(
-                                                                                                                                                    "image_url");
-                                                                                                                    String
-                                                                                                                            dateEng =
-                                                                                                                                    snapshot2
-                                                                                                                                            .getString(
-                                                                                                                                                    "dateEng");
-                                                                                                                    String
-                                                                                                                            weekRange =
-                                                                                                                                    snapshot2
-                                                                                                                                            .getString(
-                                                                                                                                                    "weekDateRange");
-                                                                                                                    lesson_days
-                                                                                                                            .add(
-                                                                                                                                    new LessonModels(
-                                                                                                                                            days,
-                                                                                                                                            dateEng,
-                                                                                                                                            weekRange,
-                                                                                                                                            R
-                                                                                                                                                    .drawable
-                                                                                                                                                    .share_today,
-                                                                                                                                            day_title,
-                                                                                                                                            day_content,
-                                                                                                                                            day_question,
-                                                                                                                                            image_Uri));
-                                                                                                                }
-                                                                                                                lesson_adapter
-                                                                                                                        .notifyDataSetChanged();
-                                                                                                            }
-                                                                                                        });
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        })
-                                                                .addOnFailureListener(
-                                                                        new OnFailureListener() {
-                                                                            @Override
-                                                                            public void onFailure(
-                                                                                    @NonNull
-                                                                                            Exception
-                                                                                                    e) {
-                                                                                Toast.makeText(
-                                                                                                MainActivity
-                                                                                                        .this,
-                                                                                                "Failed to load Content: "
-                                                                                                        + e
-                                                                                                                .getMessage(),
-                                                                                                Toast
-                                                                                                        .LENGTH_LONG)
-                                                                                        .show();
-                                                                            }
-                                                                        });
-                                                    }
-
-                                                    @Override
-                                                    public void onNothingSelected(
-                                                            AdapterView<?> adapterView) {
-                                                        // Handle the case where nothing is selected
-                                                        // ...
-                                                    }
-                                                });
-                                    }
-                                })
-                        .addOnFailureListener(
-                                new OnFailureListener() {
-                                    @Override
-                                    public void onFailure(@NonNull Exception e) {
-                                        // Hide the progress indicator
-                                        // ...
-
-                                        Toast.makeText(
-                                                        MainActivity.this,
-                                                        "Failed to load quarters: "
-                                                                + e.getMessage(),
-                                                        Toast.LENGTH_LONG)
-                                                .show();
-                                        // Log the error for debugging
-                                        // ...
-                                    }
-                                });
-            } catch (Exception err) {
-                Toast.makeText(
-                                getApplicationContext(),
-                                "lessonInit() " + err.toString(),
-                                Toast.LENGTH_SHORT)
-                        .show();
-                // Log the error for debugging
-                // ...
-            }
-
-            this.lesson_adapter =
-                    new Adapter(this.lesson_days, this, teacherPathName, lessonPathName);
-            this.day = findViewById(R.id.wk_day);
-            this.wk_day_manager = new LinearLayoutManager(getApplicationContext());
-            this.day.setAdapter(this.lesson_adapter);
-            this.day.setLayoutManager(this.wk_day_manager);
-        } catch (Exception err) {
-            Toast.makeText(
-                            getApplicationContext(),
-                            "initDays() " + err.toString(),
-                            Toast.LENGTH_SHORT)
-                    .show();
-        }
+        
     }
-
-    /*private void lesson_init(String teacher) {
-            try {
-                // Use a Set to ensure unique titles
-                HashSet<String> titles = new HashSet<>();
-
-                // Show a progress indicator while fetching data
-                // ... (e.g., show a progress bar or disable UI elements)
-
-                db.collection("quarters_" + year)
-                    .document(Quarter()) // Assuming Quarter() returns the current quarter
-                    .collection("weeks")
-                    .orderBy("timeStamp", Query.Direction.ASCENDING)
-                    .get()
-                    .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
-                        @Override
-                        public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
-                            for (QueryDocumentSnapshot weekSnapshot : queryDocumentSnapshots) {
-                                String weekDateRange = weekSnapshot.getString("weekDateRange");
-                                String title = weekSnapshot.getString("week_Title");
-                                if (title != null) {
-                                    titles.add(title);
-                                } else {
-                                    // Handle cases where the "title" field is missing
-                                    // Log an error or display a warning message
-                                    // ...
-                                }
-                            }
-
-                            // Hide the progress indicator
-                            // ...
-
-                            // Populate the spinner with unique titles
-                            ArrayAdapter<String> weekTitles = new ArrayAdapter<>(MainActivity.this,
-                                    android.R.layout.simple_spinner_dropdown_item, new ArrayList<>(titles));
-                            QWeeks.setAdapter(weekTitles);
-
-                            QWeeks.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                                @Override
-                                public void onItemSelected(AdapterView<?> adapterView, View view, int position, long id) {
-                                    String selectedTitle = adapterView.getItemAtPosition(position).toString();
-                                    fetchLessonContent(selectedTitle, teacher);
-                                }
-
-                                @Override
-                                public void onNothingSelected(AdapterView<?> adapterView) {
-                                    // Handle the case where nothing is selected
-                                    // ...
-                                }
-                            });
-                        }
-                    })
-                    .addOnFailureListener(new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-                            // Hide the progress indicator
-                            // ...
-
-                            Toast.makeText(MainActivity.this, "Failed to load quarters: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                            // Log the error for debugging
-                            // ...
-                        }
-                    });
-            } catch (Exception err) {
-                Toast.makeText(getApplicationContext(), "lessonInit() " + err.toString(), Toast.LENGTH_SHORT).show();
-                // Log the error for debugging
-                // ...
-            }
-        }
-
-
-    private void fetchLessonContent(String selectedTitle, String teacher) {
-            db.collection("quarters_" + year.toString())  // Full path reference to quarters
-            .document(Quarter())
-            .collection("weeks")
-            .get()
-            .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
-                @Override
-                public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
-                    for (QueryDocumentSnapshot snapshot : queryDocumentSnapshots) {
-                        if (selectedTitle.equals(snapshot.getString("week_Title"))) {
-                            lesson_days.clear();
-                            db.collection("quarters_" + year.toString())  // Full path reference to the specific week
-                                .document(Quarter())
-                                .collection("weeks")
-                                .document(snapshot.getId())
-                                .collection(teacher)
-                                .orderBy("timeStamp", Query.Direction.ASCENDING)
-                                .get()
-                                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
-                                    @Override
-                                    public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
-                                        teacherPathName = "quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + snapshot.getId().toString() + "/"+ "teacher";
-                                        lessonPathName = "quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + snapshot.getId().toString() + "/"+ "days";
-                                        for (QueryDocumentSnapshot snapshot2 : queryDocumentSnapshots) {
-                                            String days = snapshot2.getString("date");
-                                            String day_title = snapshot2.getString("title");
-                                            String day_content = snapshot2.getString("content");
-                                            String day_question = snapshot2.getString("question");
-                                            String image_Uri = snapshot2.getString("image_url");
-                                            String dateEng = snapshot2.getString("dateEng");
-                                            String weekRange = snapshot2.getString("weekDateRange");
-                                            lesson_days.add(new LessonModels(days, dateEng, weekRange, R.drawable.share_today, day_title, day_content, day_question, image_Uri));
-                                        }
-                                        lesson_adapter.notifyDataSetChanged();
-                                    }
-                                });
-                        }
-                    }
-                }
-            })
-            .addOnFailureListener(new OnFailureListener() {
-                @Override
-                public void onFailure(@NonNull Exception e) {
-                    Toast.makeText(MainActivity.this, "Failed to load Content: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                }
-            });
-    } */
 
     @Override // android.app.Activity
     public boolean onOptionsItemSelected(MenuItem item) {
