@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.speech.tts.TextToSpeech;
@@ -14,17 +15,21 @@ import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ClickableSpan;
 import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.text.style.UnderlineSpan;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
+import androidx.fragment.app.FragmentTransaction;
 import com.bumptech.glide.Glide;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.Task;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.core.FirestoreClient;
 import com.sal.leseniyashuleyasabato.bible;
@@ -48,7 +53,6 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.DatePicker;
 import android.widget.Spinner;
@@ -126,6 +130,12 @@ public class MainActivity extends AppCompatActivity
     private boolean isExpanded = false;
     BroadcastReceiver networkReceiver;
     ArrayList<Integer> spin = new ArrayList<>();
+    int currentPosition = 0; // Track current position globally
+    private String teacherPathName;  //"quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + "WK-"+spinPosition+ "/"+ "teacher";
+    private String lessonPathName;  //"quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + "WK-"+spinPosition+"/"+ "days";      
+
+
+    
     
 
     /* JADX INFO: Access modifiers changed from: protected */
@@ -154,7 +164,8 @@ public class MainActivity extends AppCompatActivity
         this.verses = findViewById(R.id.verses);
         Toolbar toolbar = findViewById(R.id.action_bar);
         setSupportActionBar(toolbar);
-
+        
+        
         try {
             final DocumentReference quarter =
                     db.collection("quarters_" + year.toString()).document(Quarter());
@@ -272,62 +283,205 @@ public class MainActivity extends AppCompatActivity
             try {
                 // Use a Set to ensure unique titles
                 HashSet<String> titles = new HashSet<>();
+                    // Show a progress indicator while fetching data
+                    // ... (e.g., show a progress bar or disable UI elements)
 
-                // Show a progress indicator while fetching data
-                // ... (e.g., show a progress bar or disable UI elements)
-
-                db.collection("quarters_" + year)
-                        .document(Quarter()) // Assuming Quarter() returns the current quarter
-                        .collection("weeks")
-                        .orderBy("timeStamp", Query.Direction.ASCENDING)
-                        .get()
-                        .addOnSuccessListener(
-                                new OnSuccessListener<QuerySnapshot>() {
-                                    @Override
-                                    public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
-                                        for (QueryDocumentSnapshot weekSnapshot :
-                                                queryDocumentSnapshots) {
-                                            String weekDateRange =
-                                                    weekSnapshot.getString("weekDateRange");
-                                            String title = weekSnapshot.getId() +":\n\n"+ weekSnapshot.getString("week_Title") +"\n"+ weekSnapshot.getString("weekDateRange");
-                                            if (title != null) {
-                                                titles.add(title);
-                                            } else {
-                                                // Handle cases where the "title" field is missing
-                                                // Log an error or display a warning message
-                                                // ...
+                    db.collection("quarters_" + year)
+                            .document(Quarter()) // Assuming Quarter() returns the current quarter
+                            .collection("weeks")
+                            .orderBy("timeStamp", Query.Direction.ASCENDING)
+                            .get()
+                            .addOnSuccessListener(
+                                    new OnSuccessListener<QuerySnapshot>() {
+                                        @Override
+                                        public void onSuccess(
+                                                QuerySnapshot queryDocumentSnapshots) {
+                                            for (QueryDocumentSnapshot weekSnapshot :
+                                                    queryDocumentSnapshots) {
+                                                String weekDateRange =
+                                                        weekSnapshot.getString("weekDateRange");
+                                                String title =
+                                                        weekSnapshot.getId()
+                                                                + ":\n\n"
+                                                                + weekSnapshot.getString(
+                                                                        "week_Title")
+                                                                + "\n"
+                                                                + weekSnapshot.getString(
+                                                                        "weekDateRange");
+                                                if (title != null) {
+                                                    titles.add(title);
+                                                } else {
+                                                    // Handle cases where the "title" field is
+                                                    // missing
+                                                    // Log an error or display a warning message
+                                                    // ...
+                                                }
                                             }
-                                        }
 
-                                        // Hide the progress indicator
-                                        // ...
+                                            // Hide the progress indicator
+                                            // ...
 
-                                        // Populate the spinner with unique titles
-                                        ArrayAdapter<String> weekTitles =
-                                                new ArrayAdapter<>(
-                                                        MainActivity.this,
-                                                        android.R.layout
-                                                                .simple_spinner_dropdown_item,
-                                                        new ArrayList<>(titles));
-                                       QWeeks.setAdapter(weekTitles);
+                                            // Populate the spinner with unique titles
+                                            ArrayAdapter<String> weekTitles =
+                                                    new ArrayAdapter<>(
+                                                            MainActivity.this,
+                                                            android.R.layout
+                                                                    .simple_spinner_dropdown_item,
+                                                            new ArrayList<>(titles));
+                                            QWeeks.setAdapter(weekTitles);
 
-                                        QWeeks.setOnItemSelectedListener(
-                                                new AdapterView.OnItemSelectedListener() {
-                                                    @Override
-                                                    public void onItemSelected(
-                                                            AdapterView<?> adapterView,
-                                                            View view,
-                                                            int position,
-                                                            long id) {
-                                                        spin.clear();
-                                                        spin.add(position+1);
-                                                        String selectedTitle =
+                                            QWeeks.setOnItemSelectedListener(
+                                                    new AdapterView.OnItemSelectedListener() {
+                                                        @Override
+                                                        public void onItemSelected(
+                                                                AdapterView<?> adapterView,
+                                                                View view,
+                                                                int position,
+                                                                long id) {
+                                            
+                                            String selectedTitle =
                                                                 adapterView
                                                                         .getItemAtPosition(position)
                                                                         .toString();
+                                            
+                                              
+                                            
+                                            
+                                            
+                                                            currentPosition = position;
+                                                            fireData(position, selectedTitle);
+                                            
+                                                        }
+
+                                                        @Override
+                                                        public void onNothingSelected(
+                                                                AdapterView<?> adapterView) {
+                                                            // Handle the case where nothing is
+                                                            // selected
+                                                            // ...
+                                                        }
+                                                    });
+                                
+                                        }
+                                    })
+                            .addOnFailureListener(
+                                    new OnFailureListener() {
+                                        @Override
+                                        public void onFailure(@NonNull Exception e) {
+                                            // Hide the progress indicator
+                                            // ...
+
+                                            Toast.makeText(
+                                                            MainActivity.this,
+                                                            "Failed to load quarters: "
+                                                                    + e.getMessage(),
+                                                            Toast.LENGTH_LONG)
+                                                    .show();
+                                            // Log the error for debugging
+                                            // ...
+                                        }
+                                    });
+            } catch (Exception err) {
+                Toast.makeText(
+                                getApplicationContext(),
+                                "lessonInit() " + err.toString(),
+                                Toast.LENGTH_SHORT)
+                        .show();
+                // Log the error for debugging
+                // ...
+            }
+
+                
+                //""""""
+                
+        } catch (Exception err) {
+            Toast.makeText(
+                            getApplicationContext(),
+                            "initDays() " + err.toString(),
+                            Toast.LENGTH_SHORT)
+                    .show();
+        }
+          
+                int spinPos = currentPosition+1;
+                teacherPathName = "quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + "WK-"+spinPos+"/"+ "teacher";
+                lessonPathName = "quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + "WK-"+spinPos+"/"+ "days"; 
+                lesson_adapter =new Adapter(lesson_days, MainActivity.this, teacherPathName, lessonPathName);
+                day = findViewById(R.id.wk_day);
+                wk_day_manager = new LinearLayoutManager(getApplicationContext());
+                day.setLayoutManager(wk_day_manager);
+                day.setAdapter(lesson_adapter);
+              
+            //Recyclerview complete
+
+            // FloatingActionButton listeners outside the spinner listener
+FloatingActionButton scrollRightButton = findViewById(R.id.scrollRight);
+FloatingActionButton scrollLeftButton = findViewById(R.id.scrollLeft);
+
+scrollRightButton.setOnClickListener(v -> {
+    if (currentPosition < QWeeks.getCount() - 1) { // Ensure we don't exceed bounds
+        currentPosition++;
+        QWeeks.setSelection(currentPosition); // Change spinner position
+    }
+});
+
+scrollLeftButton.setOnClickListener(v -> {
+    if (currentPosition > 0) { // Ensure we don't go below 0
+        currentPosition--;
+        QWeeks.setSelection(currentPosition); // Change spinner position
+    }
+});
+            
+// In your MainActivity
+FloatingActionButton btnOpenFragment = findViewById(R.id.btnOpenFragment);
+btnOpenFragment.setOnClickListener(new View.OnClickListener() {
+    @Override
+    public void onClick(View v) {
+        String teacher_Titles = "quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks";
+        Integer spinnerPosition = QWeeks.getSelectedItemPosition();                
+        Bundle args = new Bundle();
+        args.putString("path_name", teacher_Titles);
+        args.putInt("wk_comment", spinnerPosition);                                
+        TeacherCommentsFragment fragment = new TeacherCommentsFragment();
+        fragment.setArguments(args);                
+        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+        transaction.replace(R.id.fragment_container, fragment).addToBackStack(null) // Replace the existing fragment
+                   .commitAllowingStateLoss(); // Commit the transaction
+    }
+});
+            
+            
+            
+            IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+            networkReceiver =
+                    new BroadcastReceiver() {
+                        @Override
+                        public void onReceive(Context context, Intent intent) {
+                            if (lesson_adapter.isConnected()) {
+                                // Synchronize offline comments with Firestore when connectivity is
+                                // restored
+                                lesson_adapter
+                                        .syncOfflineComments(); // Call adapter method to sync
+                                                                // comments
+                                lesson_adapter.syncOfflineHighlights(); // sync highlights
+                                lesson_adapter.syncRemovedHighlights(); // sync removed highlights
+                            }
+                        }
+                    };
+            registerReceiver(networkReceiver, filter);
+
+        } catch (Exception err) {
+            Toast.makeText(
+                            getApplicationContext(),
+                            "onCreate() " + err.toString(),
+                            Toast.LENGTH_LONG)
+                    .show();
+        }
+    }
+    
+    public void fireData(int position, String selectedTitle) {
                                                         
                                                         db.collection(
-                                                                        "quarters_"
+                                                                       "quarters_"
                                                                                 + year
                                                                                         .toString()) // Full path reference to quarters
                                                                 .document(Quarter())
@@ -456,90 +610,6 @@ public class MainActivity extends AppCompatActivity
                                                                                         .show();
                                                                             }
                                                                         });
-                                            
-                                            
-                                                    }
-
-                                                    @Override
-                                                    public void onNothingSelected(
-                                                            AdapterView<?> adapterView) {
-                                                        // Handle the case where nothing is selected
-                                                        // ...
-                                                    }
-                                                });
-                                    }
-                                })
-                        .addOnFailureListener(
-                                new OnFailureListener() {
-                                    @Override
-                                    public void onFailure(@NonNull Exception e) {
-                                        // Hide the progress indicator
-                                        // ...
-
-                                        Toast.makeText(
-                                                        MainActivity.this,
-                                                        "Failed to load quarters: "
-                                                                + e.getMessage(),
-                                                        Toast.LENGTH_LONG)
-                                                .show();
-                                        // Log the error for debugging
-                                        // ...
-                                    }
-                                });
-            } catch (Exception err) {
-                Toast.makeText(
-                                getApplicationContext(),
-                                "lessonInit() " + err.toString(),
-                                Toast.LENGTH_SHORT)
-                        .show();
-                // Log the error for debugging
-                // ...
-            }
-
-            int spinPosition = 1;    
-            String teacherPathName = "quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + "WK-"+spinPosition+ "/"+ "teacher";
-            String lessonPathName = "quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + "WK-"+spinPosition+ "/"+ "days";    
-            this.lesson_adapter =new Adapter(this.lesson_days, this, teacherPathName, lessonPathName);
-            this.day = findViewById(R.id.wk_day);
-            this.wk_day_manager = new LinearLayoutManager(getApplicationContext());
-            this.day.setAdapter(this.lesson_adapter);
-            this.day.setLayoutManager(this.wk_day_manager);
-        } catch (Exception err) {
-            Toast.makeText(
-                            getApplicationContext(),
-                            "initDays() " + err.toString(),
-                            Toast.LENGTH_SHORT)
-                    .show();
-        }
-            
-            //Recyclerview complete
-
-            
-            IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
-            networkReceiver =
-                    new BroadcastReceiver() {
-                        @Override
-                        public void onReceive(Context context, Intent intent) {
-                            if (lesson_adapter.isConnected()) {
-                                // Synchronize offline comments with Firestore when connectivity is
-                                // restored
-                                lesson_adapter
-                                        .syncOfflineComments(); // Call adapter method to sync
-                                                                // comments
-                                lesson_adapter.syncOfflineHighlights(); // sync highlights
-                                lesson_adapter.syncRemovedHighlights(); // sync removed highlights
-                            }
-                        }
-                    };
-            registerReceiver(networkReceiver, filter);
-
-        } catch (Exception err) {
-            Toast.makeText(
-                            getApplicationContext(),
-                            "onCreate() " + err.toString(),
-                            Toast.LENGTH_LONG)
-                    .show();
-        }
     }
 
     /* JADX INFO: Access modifiers changed from: protected */
@@ -768,7 +838,91 @@ public class MainActivity extends AppCompatActivity
     }
 
     // Define a regex pattern to match all Swahili book names and verse numbers
+   
     public SpannableString spannableBibleText(String mafungu) {
+    // Start with the original text
+    SpannableString spannableString = new SpannableString(mafungu);
+
+    // Define the regex for verses
+    Pattern versePattern =
+            Pattern.compile(
+                    "(Mwanzo|Kutoka|Walawi|Hesabu|Kumbukumbu la Torati|Yoshua|Waamuzi|Ruthu|1 Samweli|2 Samweli|1 Wafalme|2 Wafalme|1 Mambo ya Nyakati|2 Mambo ya Nyakati|Ezra|Nehemia|Esta|Ayubu|Zaburi|Mithali|Mhubiri|Wimbo Ulio Bora|Isaya|Yeremia|Maombolezo|Ezekieli|Danieli|Hosea|Yoeli|Amosi|Obadia|Yona|Mika|Nahumu|Habakuki|Sefania|Hagai|Zekaria|Malaki|Mathayo|Marko|Luka|Yohana|Matendo ya Mitume|Warumi|1 Wakorintho|2 Wakorintho|Wagalatia|Waefeso|Wafilipi|Wakolosai|1 Wathesalonike|2 Wathesalonike|1 Timotheo|2 Timotheo|Tito|Filemoni|Waebrania|Yakobo|1 Petro|2 Petro|1 Yohana|2 Yohana|3 Yohana|Yuda|Ufunuo wa Yohana)\\s\\d+(:\\d+(-\\d+)?(,\\s*\\d+(:\\d+(-\\d+)?)*|,\\s*\\d+)*(\\s*,\\s*\\d+(:\\d+(-\\d+)?)*?)?)?\\s*;");
+
+    // Regex for bold text surrounded by asterisks (*text*)
+    Pattern boldPattern = Pattern.compile("\\*(.*?)\\*");
+
+    // Step 1: Handle bold text
+    Matcher boldMatcher = boldPattern.matcher(mafungu);
+    StringBuilder modifiedText = new StringBuilder(mafungu);
+    int adjustment = 0;
+
+    while (boldMatcher.find()) {
+        int start = boldMatcher.start() - adjustment;
+        int end = boldMatcher.end() - adjustment;
+        String boldText = boldMatcher.group(1); // Extract text between *
+
+        // Replace *text* with text
+        modifiedText.replace(start, end, boldText);
+        adjustment += 2; // Each * removed changes the length by 2
+    }
+
+    SpannableString finalSpannable = new SpannableString(modifiedText.toString());
+
+    // Apply bold spans
+    boldMatcher = boldPattern.matcher(mafungu); // Recreate matcher for applying spans
+    adjustment = 0;
+
+    while (boldMatcher.find()) {
+        int start = boldMatcher.start() - adjustment;
+        int end = start + boldMatcher.group(1).length();
+
+        finalSpannable.setSpan(
+                new StyleSpan(Typeface.BOLD),
+                start,
+                end,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        );
+        adjustment += 2; // Account for removed asterisks
+    }
+
+    // Step 2: Handle Bible verse spans
+    Matcher verseMatcher = versePattern.matcher(modifiedText);
+    while (verseMatcher.find()) {
+        int start = verseMatcher.start();
+        int end = verseMatcher.end();
+
+        // Apply color, underline, and clickable spans
+        finalSpannable.setSpan(
+                new ForegroundColorSpan(Color.BLUE),
+                start,
+                end,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        );
+        finalSpannable.setSpan(
+                new UnderlineSpan(),
+                start,
+                end,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        );
+        finalSpannable.setSpan(
+                new ClickableSpan() {
+                    @Override
+                    public void onClick(@NonNull View widget) {
+                        String verse = modifiedText.substring(start, end);
+                        Toast.makeText(MainActivity.this, verse, Toast.LENGTH_SHORT).show();
+                        handleVerseClick(verse, start, end);
+                    }
+                },
+                start,
+                end,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        );
+    }
+
+    return finalSpannable;
+}
+    
+    /* public SpannableString spannableBibleText(String mafungu) {
         SpannableString spannableString = new SpannableString(mafungu);
 
         // Define the regex pattern to match simple verse structures
@@ -834,7 +988,7 @@ public class MainActivity extends AppCompatActivity
         }
 
         return spannableString;
-    }
+    }*/
 
     private void handleVerseClick(String compVerse, int startIndex, int stopIndex) {
         // Define default values

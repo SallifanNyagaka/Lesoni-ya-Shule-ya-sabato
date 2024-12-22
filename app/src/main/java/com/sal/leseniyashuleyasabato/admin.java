@@ -10,7 +10,11 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ToggleButton;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -94,9 +98,10 @@ public class admin extends AppCompatActivity implements DatePickerDialog.OnDateS
     private Integer selectedWeekDay;
     private Integer selectedYear;
     private Calendar calender = Calendar.getInstance();
+    ToggleButton newToggleButton;
     
     private ImageView saturdayImageView, quarter_image_view;
-    private Button selectImageButton, select_QuarterImage_button, upload_teacher;
+    private Button selectImageButton, select_QuarterImage_button, upload_teacher, edit_button;
     
     private Uri imageUri, QURI;
     private FirebaseFirestore firestoreDatabase = FirebaseFirestore.getInstance();
@@ -127,7 +132,9 @@ public class admin extends AppCompatActivity implements DatePickerDialog.OnDateS
         this.selectImageButton = findViewById(R.id.select_image_button);
         this.select_QuarterImage_button = findViewById(R.id.select_QuarterImage_button);
         this.upload_teacher = findViewById(R.id.upload_teacher);
+        this.edit_button = findViewById(R.id.edit_button);
         Button quarterTitleUpload = findViewById(R.id.quarterTitleupload);
+        LinearLayout parentLayout = findViewById(R.id.parent); // root layout ID
         
         quarterTitleUpload.setOnClickListener(new View.OnClickListener(){
             @Override
@@ -244,9 +251,176 @@ public class admin extends AppCompatActivity implements DatePickerDialog.OnDateS
             }
         });
         
-    
+        
+        Button editButton = findViewById(R.id.edit_button);
+
+
+editButton.setOnClickListener(view -> {
+    if (newToggleButton == null) {           
+        // Create ToggleButton dynamically
+        newToggleButton = new ToggleButton(this);
+        newToggleButton.setId(View.generateViewId());
+        newToggleButton.setTextOff("Edit Lesson");
+        newToggleButton.setTextOn("Edit Teacher's Comments");
+        newToggleButton.setChecked(false);
+
+        // Set layout parameters and add to parent
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(0, 16, 0, 16);
+        newToggleButton.setLayoutParams(params);
+
+        parentLayout.addView(newToggleButton);
+
+        // Toggle Button behavior
+        newToggleButton.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                // Editing Teacher's Comments
+                Toast.makeText(this, "Editing Teacher's Comments", Toast.LENGTH_SHORT).show();
+
+                // Get the reference to the Teacher's Comments document
+                String path = "quarters_" + selectedYear + "/" + selectedQuarter + "/weeks/" + selectedWeek + "/teacher/Teacher_Comments";
+                DocumentReference docRef = FirebaseFirestore.getInstance().document(path);
+
+                // Retrieve data from Firestore and set to EditTexts
+                docRef.get().addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && task.getResult() != null) {
+                        Map<String, Object> data = task.getResult().getData();
+                        if (data != null) {
+                            String content = (String) data.get("content");
+                            String title = (String) data.get("title");
+                            String question = (String) data.get("question");
+
+                            contentEditText.setText(content);
+                            titleEditText.setText(title);
+                            questionEditText.setText(question);
+                        }
+                    } else {
+                        Toast.makeText(this, "Failed to retrieve data: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+
+                // Listen for changes to the content, title, and question fields
+                contentEditText.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        String newContent = s.toString();
+                        docRef.update("content", newContent)
+                                .addOnSuccessListener(aVoid -> Toast.makeText(admin.this, "Changes saved", Toast.LENGTH_SHORT).show())
+                                .addOnFailureListener(e -> Toast.makeText(admin.this, "Failed to save changes: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                    }
+                });
+
+                titleEditText.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        String newTitle = s.toString();
+                        docRef.update("title", newTitle)
+                                .addOnSuccessListener(aVoid -> Toast.makeText(admin.this, "Changes saved", Toast.LENGTH_SHORT).show())
+                                .addOnFailureListener(e -> Toast.makeText(admin.this, "Failed to save changes: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                    }
+                });
+
+                questionEditText.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        String newQuestion = s.toString();
+                        docRef.update("question", newQuestion)
+                                .addOnSuccessListener(aVoid -> Toast.makeText(admin.this, "Changes saved", Toast.LENGTH_SHORT).show())
+                                .addOnFailureListener(e -> Toast.makeText(admin.this, "Failed to save changes: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                    }
+                });
+
+            } else {
+                // Editing Lesson Content
+                Toast.makeText(this, "Editing Lesson Content", Toast.LENGTH_SHORT).show();
+
+                // Get the reference to the Lesson Content document
+                String path = "quarters_" + selectedYear + "/" + selectedQuarter + "/weeks/" + selectedWeek + "/days/" + currentDateString;
+                DocumentReference docRef = FirebaseFirestore.getInstance().document(path);
+
+                // Retrieve data from Firestore and set to EditTexts
+                docRef.get().addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && task.getResult() != null) {
+                        Map<String, Object> data = task.getResult().getData();
+                        if (data != null) {
+                            String content = (String) data.get("content");
+                            String title = (String) data.get("title");
+                            String question = (String) data.get("question");
+
+                            contentEditText.setText(content);
+                            titleEditText.setText(title);
+                            questionEditText.setText(question);
+                        }
+                    } else {
+                        Toast.makeText(this, "Failed to retrieve data: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+
+                // Listen for changes to the content, title, and question fields
+                contentEditText.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        String newContent = s.toString();
+                        docRef.update("content", newContent)
+                                .addOnSuccessListener(aVoid -> Toast.makeText(admin.this, "Changes saved", Toast.LENGTH_SHORT).show())
+                                .addOnFailureListener(e -> Toast.makeText(admin.this, "Failed to save changes: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                    }
+                });
+
+                titleEditText.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        String newTitle = s.toString();
+                        docRef.update("title", newTitle)
+                                .addOnSuccessListener(aVoid -> Toast.makeText(admin.this, "Changes saved", Toast.LENGTH_SHORT).show())
+                                .addOnFailureListener(e -> Toast.makeText(admin.this, "Failed to save changes: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                    }
+                });
+
+                questionEditText.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        String newQuestion = s.toString();
+                        docRef.update("question", newQuestion)
+                                .addOnSuccessListener(aVoid -> Toast.makeText(admin.this, "Changes saved", Toast.LENGTH_SHORT).show())
+                                .addOnFailureListener(e -> Toast.makeText(admin.this, "Failed to save changes: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                    }
+                });
+            }
+        });
+    } else {
+        // Closing curly brace was missing for the main `editButton` `setOnClickListener`
     }
-    
+});
+        
+}    
    /* private void selectImage() {
         Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
         startActivityForResult(intent, REQUEST_IMAGE_SELECT_SATURDAY);
