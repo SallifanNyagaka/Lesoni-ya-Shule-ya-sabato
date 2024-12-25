@@ -437,7 +437,13 @@ btnOpenFragment.setOnClickListener(new View.OnClickListener() {
     @Override
     public void onClick(View v) {
         String teacher_Titles = "quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks";
-        Integer spinnerPosition = QWeeks.getSelectedItemPosition();                
+        Integer spinnerPosition = QWeeks.getSelectedItemPosition();
+        Intent teacherComments = new Intent(MainActivity.this, TeacherCommentsActivity.class);
+        teacherComments.putExtra("path_name", teacher_Titles);
+        teacherComments.putExtra("wk_comment", spinnerPosition);
+        startActivity(teacherComments);
+
+        /* fragment data:
         Bundle args = new Bundle();
         args.putString("path_name", teacher_Titles);
         args.putInt("wk_comment", spinnerPosition);                                
@@ -445,7 +451,7 @@ btnOpenFragment.setOnClickListener(new View.OnClickListener() {
         fragment.setArguments(args);                
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         transaction.replace(R.id.fragment_container, fragment).addToBackStack(null) // Replace the existing fragment
-                   .commitAllowingStateLoss(); // Commit the transaction
+                   .commitAllowingStateLoss(); // Commit the transaction */
     }
 });
             
