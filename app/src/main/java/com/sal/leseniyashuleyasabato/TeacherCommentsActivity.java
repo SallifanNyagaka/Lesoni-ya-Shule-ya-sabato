@@ -36,6 +36,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -128,7 +129,7 @@ public class TeacherCommentsActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
-                        String comment = documentSnapshot.getString("content");
+                        String comment = documentSnapshot.getString("content") + documentSnapshot.getString("question");
                         if (comment != null) {
                             displayComment(comment); // Display the comment
                         } else {
@@ -225,8 +226,8 @@ public class TeacherCommentsActivity extends AppCompatActivity {
     }
 
     public void createTextViews(String mafungu) {
-        // Map to store title-content pairs
-        Map<String, String> titleContentMap = new HashMap<>();
+        // LinkedHashMap to preserve insertion order
+        Map<String, String> titleContentMap = new LinkedHashMap<>();
 
         // Regex pattern to extract title-content pairs based on asterisks
         Pattern pattern = Pattern.compile("\\*(.*?)\\*([^*]+)");  // Matches *title*content
@@ -235,14 +236,20 @@ public class TeacherCommentsActivity extends AppCompatActivity {
         while (matcher.find()) {
             String title = matcher.group(1).trim(); // Title is between asterisks
             String content = matcher.group(2).trim(); // Content is after the title
-            titleContentMap.put(title, content);  // Add to map
+            titleContentMap.put(title, content);  // Add to LinkedHashMap
         }
 
         // Create a LinearLayout to dynamically add TextViews
         LinearLayout linearLayout = new LinearLayout(this);
         linearLayout.setOrientation(LinearLayout.VERTICAL);
 
-        // Iterate over the map to create TextViews for each title-content pair
+        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        layoutParams.setMargins(0, 20, 0, 0); // 20dp top margin, adjust as needed
+
+        // Iterate over the LinkedHashMap to create TextViews for each title-content pair
         for (Map.Entry<String, String> entry : titleContentMap.entrySet()) {
             String title = entry.getKey();
             String content = entry.getValue();
@@ -250,6 +257,7 @@ public class TeacherCommentsActivity extends AppCompatActivity {
             // Create TextView for title (bold)
             TextView titleTextView = new TextView(this);
             titleTextView.setText(title);
+            titleTextView.setLayoutParams(layoutParams);
             titleTextView.setTypeface(null, Typeface.BOLD); // Bold the title
             linearLayout.addView(titleTextView); // Add to layout
 
@@ -266,6 +274,7 @@ public class TeacherCommentsActivity extends AppCompatActivity {
         // Add the LinearLayout to your parent layout
         commentsContainer.addView(linearLayout);
     }
+
 
 
     // Define a regex pattern to match all Swahili book names and verse numbers

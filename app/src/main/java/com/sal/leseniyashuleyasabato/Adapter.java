@@ -169,7 +169,7 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
         
         
         // Set an OnCheckedChangeListener to handle toggle button state changes
-        holder.maongezi_mwalimu.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+       /* holder.maongezi_mwalimu.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
@@ -181,7 +181,7 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
                     holder.maongezi_mwalimu.setText("Rudi kwa Lesoni");        
                 }
             }
-        });
+        }); */
     }
     
 
@@ -235,7 +235,7 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
         private final TextView day_title;
         private final ImageView share_image;
         private final ImageView saturday_image, ic_tts;
-        private final ToggleButton maongezi_mwalimu;
+        //private final ToggleButton maongezi_mwalimu;
 
         public ViewHolder(View itemView, Context context) { // Constructor receives the context
             super(itemView);
@@ -249,7 +249,7 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
             this.share_image = itemView.findViewById(R.id.day_share);
             this.ic_tts = itemView.findViewById(R.id.ic_tts);
             this.saturday_image = itemView.findViewById(R.id.saturday_image);
-            this.maongezi_mwalimu = itemView.findViewById(R.id.maongezi_mwalimu);
+            //this.maongezi_mwalimu = itemView.findViewById(R.id.maongezi_mwalimu);
         }
     }
 
