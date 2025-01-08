@@ -8,9 +8,8 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.ConnectivityManager;
-import android.net.Uri;
+import android.os.Parcelable;
 import android.speech.tts.TextToSpeech;
-import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ClickableSpan;
@@ -24,54 +23,40 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
-import androidx.fragment.app.FragmentTransaction;
+
 import com.bumptech.glide.Glide;
-import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.Task;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.core.FirestoreClient;
-import com.sal.leseniyashuleyasabato.bible;
+import com.google.firebase.firestore.Source;
+
 import java.util.Locale;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import android.app.DatePickerDialog;
-import android.content.Intent;
-import android.graphics.Color;
 import android.os.Bundle;
-import android.text.Spannable;
-import android.text.SpannableString;
-import android.text.Spanned;
 import android.text.method.LinkMovementMethod;
-import android.text.style.ClickableSpan;
-import android.text.style.ForegroundColorSpan;
-import android.text.style.UnderlineSpan;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.DatePicker;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.DialogFragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.navigation.NavigationView;
-import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -82,14 +67,19 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Arrays;
-import java.util.regex.PatternSyntaxException;
+
+import android.app.AlertDialog;
+import android.view.LayoutInflater;
+import android.widget.CompoundButton;
+import android.widget.SeekBar;
+import android.widget.Switch;
+
+import androidx.appcompat.app.AppCompatDelegate;
+
 
 /* loaded from: classes3.dex */
 public class MainActivity extends AppCompatActivity
@@ -135,9 +125,6 @@ public class MainActivity extends AppCompatActivity
     private String lessonPathName;  //"quarters_"+year.toString() +"/"+ Quarter() + "/" + "weeks" + "/" + "WK-"+spinPosition+"/"+ "days";      
 
 
-    
-    
-
     /* JADX INFO: Access modifiers changed from: protected */
     @Override // androidx.fragment.app.FragmentActivity, androidx.activity.ComponentActivity,
               // androidx.core.app.ComponentActivity, android.app.Activity
@@ -158,6 +145,7 @@ public class MainActivity extends AppCompatActivity
         }
         // User is registered, load the main content
         setContentView(R.layout.activity_main);
+        LessonViewModel viewModel = new ViewModelProvider(this).get(LessonViewModel.class);
 
         this.textToSpeech = new TextToSpeech(this, this);
         this.quarter_image = findViewById(R.id.quarter_image);
@@ -167,7 +155,36 @@ public class MainActivity extends AppCompatActivity
         
         
         try {
+
             final DocumentReference quarter =
+                    db.collection("quarters_" + year.toString()).document(Quarter());
+
+// First attempt to fetch from cache
+            quarter.get(Source.CACHE)
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful() && task.getResult() != null) {
+                            processDocument(task.getResult());
+                        } else {
+                            // Fallback to server if cache misses or an error occurs
+                            quarter.get()
+                                    .addOnCompleteListener(serverTask -> {
+                                        if (serverTask.isSuccessful() && serverTask.getResult() != null) {
+                                            processDocument(serverTask.getResult());
+                                        } else {
+                                            Toast.makeText(
+                                                            getApplicationContext(),
+                                                            "Failed to load document",
+                                                            Toast.LENGTH_SHORT)
+                                                    .show();
+                                        }
+                                    });
+                        }
+                    });
+
+            //With caching included
+
+
+            /*final DocumentReference quarter =
                     db.collection("quarters_" + year.toString()).document(Quarter());
             quarter.get()
                     .addOnCompleteListener(
@@ -200,6 +217,7 @@ public class MainActivity extends AppCompatActivity
                                                 SpannableString highlightedText =
                                                         spannableBibleText(quarterIntroduction);
                                                 verses.setText(highlightedText);
+                                                verses.setTextSize(textsize);
                                                 verses.setMovementMethod(
                                                         LinkMovementMethod.getInstance());
                                             } else {
@@ -230,7 +248,7 @@ public class MainActivity extends AppCompatActivity
                                                 .show();
                                     }
                                 }
-                            });
+                            }); */
 
             weekTitle = findViewById(R.id.weekTitle);
             weekTitle.setText(quarterMonths(Quarter()));
@@ -275,9 +293,73 @@ public class MainActivity extends AppCompatActivity
                         }
                     });
 
+
+
+            //With caching included
+
+
+
+
+            int spinPos = currentPosition + 1;
+            String teacherPathName = "quarters_" + year.toString() + "/" + Quarter() + "/weeks/WK-" + spinPos + "/teacher";
+            String lessonPathName = "quarters_" + year.toString() + "/" + Quarter() + "/weeks/WK-" + spinPos + "/days";
+            lesson_days = new ArrayList<>();
+            lesson_adapter = new Adapter(lesson_days, MainActivity.this, teacherPathName, lessonPathName);
+            day = findViewById(R.id.wk_day);
+            wk_day_manager = new LinearLayoutManager(getApplicationContext());
+            day.setLayoutManager(wk_day_manager);
+            day.setAdapter(lesson_adapter);
+
+
+            if (savedInstanceState == null){
+                // Observe Spinner Titles
+
+                viewModel.getSpinnerTitles().observe(this, titles -> {
+                    if (titles != null && !titles.isEmpty()){
+                        ArrayAdapter<String> weekTitles = new ArrayAdapter<>(
+                                MainActivity.this,
+                                android.R.layout.simple_spinner_dropdown_item,
+                                titles);
+                        QWeeks.setAdapter(weekTitles);
+                        QWeeks.setSelection(currentPosition);
+                    }
+
+                });
+
+                // Observe Lesson Days
+                viewModel.getLessonDays().observe(this, lessonDays -> {
+                    if (lessonDays != null && !lessonDays.isEmpty()) {
+                        lesson_adapter.updateLessonDays(lessonDays);
+                    }
+                });
+
+                // Spinner Selection
+                QWeeks.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                        String selectedTitle = parent.getItemAtPosition(position).toString();
+                        currentPosition = position;
+                        Log.d("Spinner", "Selected position: " + position);
+                        viewModel.fetchSpinnerAndLessonData(year, Quarter(), selectedTitle);
+                    }
+
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {
+                        // Do nothing
+                    }
+                });
+
+            }
+
+
+            // Initial Data Fetch
+            viewModel.fetchSpinnerAndLessonData(year, Quarter(), null);
+
+
             //Recyclerview Init from firebase
-            
-            try {
+
+            /*try {
             this.lesson_days = new ArrayList<>();
             
             try {
@@ -409,7 +491,7 @@ public class MainActivity extends AppCompatActivity
                 day = findViewById(R.id.wk_day);
                 wk_day_manager = new LinearLayoutManager(getApplicationContext());
                 day.setLayoutManager(wk_day_manager);
-                day.setAdapter(lesson_adapter);
+                day.setAdapter(lesson_adapter);*/
               
             //Recyclerview complete
 
@@ -483,9 +565,61 @@ btnOpenFragment.setOnClickListener(new View.OnClickListener() {
                     .show();
         }
     }
-    
+
+    private void processDocument(DocumentSnapshot document) {
+        if (document.exists()) {
+            String quarterTitle = document.getString("QuarterTitle");
+            String quarterIntroduction = document.getString("quarterIntroduction");
+            String imageUrl = document.getString("image_url");
+
+            // Update ActionBar
+            if (getSupportActionBar() != null) {
+                getSupportActionBar().setTitle(quarterTitle);
+            }
+
+            // Load the image
+            if (!isDestroyed() && imageUrl != null && !imageUrl.isEmpty()) {
+                Glide.with(this)
+                        .load(imageUrl)
+                        .into(quarter_image);
+            } else {
+                quarter_image.setImageResource(R.drawable.lesson); // Default image
+            }
+
+            // Update the TextView with spannable text
+            if (quarterIntroduction != null) {
+                SpannableString highlightedText = spannableBibleText(quarterIntroduction);
+                verses.setText(highlightedText);
+                verses.setTextSize(getTextSize());
+                verses.setMovementMethod(LinkMovementMethod.getInstance());
+            } else {
+                Toast.makeText(
+                                getApplicationContext(),
+                                "Quarter Intro not loaded",
+                                Toast.LENGTH_LONG)
+                        .show();
+            }
+
+            Toast.makeText(
+                            getApplicationContext(),
+                            quarterTitle,
+                            Toast.LENGTH_SHORT)
+                    .show();
+        } else {
+            Toast.makeText(
+                            getApplicationContext(),
+                            "No such Document",
+                            Toast.LENGTH_SHORT)
+                    .show();
+        }
+    }
+
+    private int getTextSize(){
+        SharedPreferences textSize = getSharedPreferences("AppSettings", MODE_PRIVATE);
+        return textSize.getInt("textSize", 16);
+    }
     public void fireData(int position, String selectedTitle) {
-                                                        
+
                                                         db.collection(
                                                                        "quarters_"
                                                                                 + year
@@ -750,12 +884,19 @@ btnOpenFragment.setOnClickListener(new View.OnClickListener() {
         }
         if (item.getItemId() == R.id.bible) {
             Intent bible = new Intent(MainActivity.this, com.sal.leseniyashuleyasabato.bible.class);
+            bible.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(bible);
             return true;
         }
         if (item.getItemId() == R.id.login_register) {
             Intent reg = new Intent(MainActivity.this, RegisterActivity.class);
+            reg.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(reg);
+            return true;
+        }
+
+        if (item.getItemId() == R.id.settings) {
+            openSettingsDialog();
             return true;
         }
 
@@ -1140,4 +1281,127 @@ btnOpenFragment.setOnClickListener(new View.OnClickListener() {
         Intent intent = new Intent(getApplicationContext(), bible.class);
         startActivity(intent);
     }
+
+
+    //settings section:
+
+    private void openSettingsDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        // Create dynamic settings layout
+        View dialogView = createDynamicSettingsView();
+        builder.setView(dialogView);
+
+        builder.setTitle("Settings");
+        builder.setPositiveButton("OK", (dialog, which) -> dialog.dismiss());
+        builder.create().show();
+    }
+
+    private View createDynamicSettingsView() {
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_settings, null);
+
+        // Reference UI elements
+        SeekBar textSizeSeekBar = dialogView.findViewById(R.id.textSizeSeekBar);
+        TextView textSizePreview = dialogView.findViewById(R.id.textSizePreview);
+        Switch themeSwitch = dialogView.findViewById(R.id.themeSwitch);
+        TextView resetDefaults = dialogView.findViewById(R.id.resetDefaults);
+
+        SharedPreferences preferences = getSharedPreferences("AppSettings", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+
+        // Text size setting
+        int savedTextSize = preferences.getInt("textSize", 16);
+        textSizeSeekBar.setProgress(savedTextSize - 12);
+        textSizePreview.setTextSize(savedTextSize);
+        textSizePreview.setText("Preview Text Size: " + savedTextSize);
+
+        textSizeSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                int newSize = 12 + progress;
+                textSizePreview.setTextSize(newSize);
+                textSizePreview.setText("Preview Text Size: " + newSize);
+                editor.putInt("textSize", newSize);
+                editor.apply();
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
+
+        // Theme setting
+        boolean isDarkMode = preferences.getBoolean("darkMode", false);
+        themeSwitch.setChecked(isDarkMode);
+        themeSwitch.setOnCheckedChangeListener((CompoundButton buttonView, boolean isChecked) -> {
+            if (isChecked) {
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+            } else {
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+            }
+            editor.putBoolean("darkMode", isChecked);
+            editor.apply();
+        });
+
+        // Reset to default settings
+        resetDefaults.setOnClickListener(v -> {
+            editor.clear().apply();
+            textSizeSeekBar.setProgress(4);
+            textSizePreview.setTextSize(16);
+            textSizePreview.setText("Preview Text Size: 16");
+            themeSwitch.setChecked(false);
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+            Toast.makeText(this, "Settings reset to defaults", Toast.LENGTH_SHORT).show();
+        });
+
+        return dialogView;
+    }
+
+    private final SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener =
+            (sharedPreferences, key) -> {
+                if ("textSize".equals(key)) {
+                    lesson_adapter.notifyDataSetChanged(); // Notify the adapter to refresh views
+                }
+            };
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        SharedPreferences preferences = getSharedPreferences("AppSettings", Context.MODE_PRIVATE);
+        preferences.registerOnSharedPreferenceChangeListener(preferenceChangeListener);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
+                .unregisterOnSharedPreferenceChangeListener(preferenceChangeListener);
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+
+        super.onSaveInstanceState(outState);
+        super.onSaveInstanceState(outState); outState.putInt("SPINNER_POSITION", QWeeks.getSelectedItemPosition());
+        if (day != null && wk_day_manager != null) {
+            outState.putParcelable("recycler_state", wk_day_manager.onSaveInstanceState());
+        }
+    }
+
+    @Override
+    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        super.onRestoreInstanceState(savedInstanceState);
+        int position = savedInstanceState.getInt("SPINNER_POSITION", 0); QWeeks.setSelection(position);
+        if (day != null && wk_day_manager != null && savedInstanceState.containsKey("recycler_state")) {
+            Parcelable recyclerState = savedInstanceState.getParcelable("recycler_state");
+            wk_day_manager.onRestoreInstanceState(recyclerState);
+        }
+    }
+
+
+
 }

@@ -23,11 +23,12 @@ public class BibleChapters extends AppCompatActivity implements RecyclerViewClic
     List<ChapterModel> chapterModelList;
     chapterAdapter Adapter;
 
-    Integer prevLine;
+    Integer prevLine, BookPosition;
 
     ArrayList<BibleMemory> chapterList;
 
     String file_Name, chapter;
+
 
 
     @Override
@@ -45,6 +46,7 @@ public class BibleChapters extends AppCompatActivity implements RecyclerViewClic
         InputStream stream;
         String bookName = get.getStringExtra("bookName");
         file_Name = "books/"+bookName;
+        BookPosition = get.getIntExtra("position", 0);
 
         try {
             stream = getAssets().open(file_Name);

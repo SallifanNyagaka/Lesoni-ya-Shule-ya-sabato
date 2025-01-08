@@ -24,13 +24,8 @@ public class bible extends AppCompatActivity implements RecyclerViewClicks {
 
     String []files;
 
-    public final String []books = {"Mwanzo", "Kutoka", "Mambo ya Walawi", "Hesabu", "KumbuKumbu la torati", "Yoshua",
-    "Waamuzi", "Ruthu", "1 Samweli", "2 Samweli", "1 Wafalme", "2 Wafalme", "1 Mambo ya Nyakati", "2 Mambo ya Nyakati",
-    "Ezra", "Nehemia", "Esta", "Ayubu", "Zaburi", "Mithali", "Mhubiri", "Wimbo ulio Bora", "Isaya", "Yeremia", "Maombolezo",
-    "Ezekieli", "Danieli", "Hosea", "Yoeli", "Amosi", "Obadia", "Yona", "Mika", "Nahumu", "Habakuki", "Sefania", "Hagai",
-    "Zekaria", "Malaki", "Mathayo", "Marko", "Luka", "Yohana", "Matendo ya Mitume", "Warumi", "1 Wakorintho", "2 Wakorintho",
-    "Wagalatia", "Waefeso", "Wafilipi", "Wakolosai", "1 Wathesalonike", "2 Wathesalonike", "1 Timotheo", "2 Timotheo", "Tito",
-    "Filemoni", "Waeberania", "Yakobo", "1 Petro", "2 Petro", "1 Yohana", "2 Yohana", "3 Yohana", "Yuda", "Ufunuo wa Yohana"};
+    BibleStuff stuff = new BibleStuff();
+    String []books = stuff.books;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,7 +48,8 @@ public class bible extends AppCompatActivity implements RecyclerViewClicks {
     @Override
 public void onBackPressed() {
     // Create an Intent to specify the target activity
-    Intent intent = new Intent(bible.this, MainActivity.class);
+        super.onBackPressed();
+        Intent intent = new Intent(bible.this, MainActivity.class);
     
     // Start the target activity
     startActivity(intent);
@@ -91,8 +87,10 @@ public void onBackPressed() {
         intent.putExtra("book", positions);
 
         for (String book: files) {
-            if (positions.equals(book.replace(".txt", "").trim()))
+            if (positions.equals(book.replace(".txt", "").trim())) {
                 intent.putExtra("bookName", book);
+                intent.putExtra("position", position);
+            }
         }
 
         startActivity(intent);

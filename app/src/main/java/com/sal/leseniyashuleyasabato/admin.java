@@ -593,6 +593,7 @@ private void startCrop(Uri uri) {
         String question = questionEditText.getText().toString();
         Date date = new Date();
         Timestamp timestamp = new Timestamp(date);
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy");
 
         if (selectedQuarter == null || selectedWeek == null || currentDateString == null) {
             statusTextView.setText("Please select quarter, week, and date.");
@@ -614,7 +615,7 @@ private void startCrop(Uri uri) {
         dayContent.put("dateEng", currentDateStringEnglish);
         dayContent.put("weekDateRange", weekContentRange);
 
-        final DocumentReference weekRef = firestoreDatabase.collection("quarters_"+calender.get(Calendar.YEAR))
+        final DocumentReference weekRef = firestoreDatabase.collection("quarters_"+ dateFormat.format(date))
                 .document(selectedQuarter).collection("weeks").document(selectedWeek);
         
         if(calender.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
@@ -798,7 +799,8 @@ public void onDateSet(DatePicker datePicker, int year, int month, int day) {
     }
 
     // Store the week range in a variable (for example, weekContentRange)
-    weekContentRange = weekRangeString + " ," + year;
+    Calendar cal = Calendar.getInstance();
+    weekContentRange = weekRangeString + " ," + cal.get(Calendar.YEAR);
 
     // Update other variables as needed
     this.selectedYear = year;

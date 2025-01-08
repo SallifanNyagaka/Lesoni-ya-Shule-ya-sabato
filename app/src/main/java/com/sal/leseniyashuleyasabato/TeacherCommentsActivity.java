@@ -1,5 +1,7 @@
 package com.sal.leseniyashuleyasabato;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
@@ -52,6 +54,8 @@ public class TeacherCommentsActivity extends AppCompatActivity {
     private LinearLayout commentsContainer;
     private String path = "quarters_2024/Q4/weeks";
     private Integer wk_comment = 1;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -257,6 +261,7 @@ public class TeacherCommentsActivity extends AppCompatActivity {
             // Create TextView for title (bold)
             TextView titleTextView = new TextView(this);
             titleTextView.setText(title);
+            titleTextView.setTextSize(getTextSize());
             titleTextView.setLayoutParams(layoutParams);
             titleTextView.setTypeface(null, Typeface.BOLD); // Bold the title
             linearLayout.addView(titleTextView); // Add to layout
@@ -267,6 +272,7 @@ public class TeacherCommentsActivity extends AppCompatActivity {
             // Create TextView for content and apply the spannable string
             TextView contentTextView = new TextView(this);
             contentTextView.setText(spannableContent);
+            contentTextView.setTextSize(getTextSize());
             contentTextView.setMovementMethod(LinkMovementMethod.getInstance()); // Enable clicks
             linearLayout.addView(contentTextView); // Add to layout
         }
@@ -492,6 +498,11 @@ public class TeacherCommentsActivity extends AppCompatActivity {
     private void cannotOpen() {
         Intent intent = new Intent(TeacherCommentsActivity.this, bible.class);
         startActivity(intent);
+    }
+
+    private int getTextSize(){
+        SharedPreferences settings = getSharedPreferences("AppSettings", Context.MODE_PRIVATE);
+        return settings.getInt("textSize", 16);
     }
 
 }

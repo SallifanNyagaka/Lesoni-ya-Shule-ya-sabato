@@ -38,6 +38,22 @@
                 android:layout_height="wrap_content"
                 android:id="@+id/readBibleRecyc"/>
 
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/scrollRightBible"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:layout_margin="16dp"
+                android:src="@drawable/ic_arrow_right" />
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/scrollLeftBible"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|start"
+                android:layout_margin="16dp"
+                android:src="@drawable/ic_arrow_left" />
+
         </LinearLayout>
 
     </ScrollView>

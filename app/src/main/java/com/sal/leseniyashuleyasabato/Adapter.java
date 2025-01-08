@@ -32,6 +32,7 @@ import androidx.appcompat.app.AlertDialog;
 import com.google.firebase.firestore.FirebaseFirestore;
 import java.lang.reflect.Type;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import android.content.Context;
 import android.content.Intent;
@@ -52,6 +53,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import java.io.BufferedReader;
@@ -71,15 +73,22 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
     public  String teacher = "days";
     String teacherPathName;
     String lessonPathName;
+
     
     private Map<Integer, List<String>> commentsMap = new HashMap<>();
+
+
     
     public Adapter(List<LessonModels> days, Context context, String teacherPathName, String lessonPathName) {
         this.days = days;
         this.context = context;
         this.teacherPathName = teacherPathName;
         this.lessonPathName = lessonPathName;
+
     }
+
+
+
 
     @NonNull
     @Override
@@ -93,8 +102,13 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
         LessonModels lessonModel = days.get(position);
 
         holder.date.setText(lessonModel.getDate());
+        holder.date.setTextSize(getTextSize());
+
         holder.weekDateRange.setText("Wiki hii: " + lessonModel.getWeekRange());
+        holder.weekDateRange.setTextSize(getTextSize());
+
         holder.day_title.setText(lessonModel.getDay_title());
+        holder.day_title.setTextSize(getTextSize());
 
         // Clear previous dynamic views
         holder.paragraphContainer.removeAllViews();
@@ -407,7 +421,30 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
         return "comment_" + weekId + "_" + position + "_" + paragraphIndex;
     }
 
-    private void addParagraphsToContainer(
+    private SpannableString applyBoldAsterisks(SpannableString spannableParagraph) {
+        String paragraphText = spannableParagraph.toString();
+        Pattern boldPattern = Pattern.compile("\\*(.*?)\\*"); // Matches text between asterisks
+        Matcher matcher = boldPattern.matcher(paragraphText);
+
+        while (matcher.find()) {
+            int start = matcher.start(1); // Start of the bold text
+            int end = matcher.end(1);    // End of the bold text
+
+            // Apply bold style only to the matched text
+            spannableParagraph.setSpan(
+                    new StyleSpan(Typeface.BOLD),
+                    start,
+                    end,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            );
+        }
+
+        return spannableParagraph;
+    }
+
+
+
+   private void addParagraphsToContainer(
             LinearLayout container, String content, int position, String weekId) {
         String[] paragraphs = content.split("\\n\\n");
         String userEmail = getUserEmail(); // Method to get user email from SharedPreferences
@@ -415,16 +452,14 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
         for (int i = 0; i < paragraphs.length; i++) {
             final int paragraphIndex = i;
             String paragraph = paragraphs[paragraphIndex];
-            
-            SpannableString spannableParagraph = applyBoldTerms(paragraph);
-        
-        // Then, apply the Bible verse spans
-        SpannableString finalSpannable = spannableBibleText(spannableParagraph.toString());
+
+            SpannableString spannableParagraph = applyBoldAsterisks(new SpannableString(paragraph));
+            SpannableString finalSpannable = spannableBibleText(spannableParagraph.toString());
 
             // Create and configure TextView for the paragraph
             TextView tvParagraph = new TextView(container.getContext());
             tvParagraph.setText(spannableBibleText(finalSpannable.toString()));
-            tvParagraph.setTextSize(16);
+            tvParagraph.setTextSize(getTextSize());
             tvParagraph.setPadding(4, 8, 4, 8);
             tvParagraph.setTextIsSelectable(true); // Allow text selection
             applyUserHighlights(tvParagraph, weekId, position, paragraphIndex);
@@ -964,6 +999,16 @@ public void syncRemovedHighlights() {
                 "userEmail", "Haipo/ Non Existent"); // Default value for unregistered users
     }
 
+    private int getTextSize(){
+        try{
+            SharedPreferences preferences = context.getSharedPreferences("AppSettings", Context.MODE_PRIVATE);
+            return preferences.getInt("textSize", 16);
+        }catch (NullPointerException e){
+            return 16;
+        }
+
+    }
+
     // Efficiently save comment data using SharedPreferences
     private void saveComment(String weekId, int position, int paragraphIndex, String comment) {
         try {
@@ -1234,4 +1279,12 @@ public void syncRemovedHighlights() {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(intent);
     }
+
+    public void updateLessonDays(List<LessonModels> newLessonDays) {
+        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new LessonDaysDiffCallback(this.days, newLessonDays));
+        this.days.clear();
+        this.days.addAll(newLessonDays);
+        diffResult.dispatchUpdatesTo(this);
+    }
+
 }

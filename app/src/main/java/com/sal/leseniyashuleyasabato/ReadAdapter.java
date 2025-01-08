@@ -1,5 +1,9 @@
 package com.sal.leseniyashuleyasabato;
 
+import static android.content.Context.MODE_PRIVATE;
+
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,9 +19,12 @@ public class ReadAdapter extends RecyclerView.Adapter<ReadAdapter.viewHolder> {
     private final List<Books> verses;
     private final RecyclerViewClicks recyclerViewClicks;
 
-    public ReadAdapter(List<Books> verses, RecyclerViewClicks recyclerViewClicks) {
+    private final Context context;
+
+    public ReadAdapter(List<Books> verses, RecyclerViewClicks recyclerViewClicks, Context context) {
         this.verses = verses;
         this.recyclerViewClicks = recyclerViewClicks;
+        this.context = context;
     }
 
 
@@ -33,6 +40,13 @@ public class ReadAdapter extends RecyclerView.Adapter<ReadAdapter.viewHolder> {
         String verseNo = this.verses.get(position).getBook_number();
         String verse = this.verses.get(position).getBook();
         holder.setData(verseNo, verse);
+        holder.Verse.setTextSize(getTextSize());
+        holder.verseNumber.setTextSize((float) (getTextSize()-(0.5*getTextSize())));
+    }
+
+    private int getTextSize() {
+        SharedPreferences textSize = context.getSharedPreferences("AppSettings", MODE_PRIVATE);
+        return textSize.getInt("textSize", 16);
     }
 
     @Override
