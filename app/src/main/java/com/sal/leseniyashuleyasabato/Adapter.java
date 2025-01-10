@@ -62,6 +62,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -73,6 +74,10 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
     public  String teacher = "days";
     String teacherPathName;
     String lessonPathName;
+
+    String [] bibleBooks  = new BibleStuff().books;
+
+    Integer position;
 
     
     private Map<Integer, List<String>> commentsMap = new HashMap<>();
@@ -1177,7 +1182,8 @@ public void syncRemovedHighlights() {
                 Matcher matcher = pattern.matcher(segment.trim());
 
                 if (matcher.find()) {
-                    String currentBook = matcher.group(1).toLowerCase().trim();
+                    String currentBookWithoutCase = Objects.requireNonNull(matcher.group(1)).trim();
+                    String currentBook = Objects.requireNonNull(matcher.group(1)).toLowerCase().trim();
                     Integer currentChapter =
                             matcher.group(3) != null
                                     ? Integer.parseInt(matcher.group(3).trim())
@@ -1226,6 +1232,7 @@ public void syncRemovedHighlights() {
 
                     // Update the book if it's still the default
                     if (book.equals("books/mwanzo.txt") && !currentBook.isEmpty()) {
+                        position = findStringInArray(bibleBooks, currentBookWithoutCase);
                         book = "books/" + currentBook + ".txt";
                     }
 
@@ -1245,7 +1252,10 @@ public void syncRemovedHighlights() {
                                             + "\nVerse: "
                                             + verse
                                             + "\nTo: "
-                                            + to,
+                                            + to
+                                            + "\nPosition: "
+                                            +position,
+
                                     Toast.LENGTH_LONG)
                             .show();
 
@@ -1271,6 +1281,8 @@ public void syncRemovedHighlights() {
         bible.putExtra("verse", verse);
         bible.putExtra("to", to);
         bible.putExtra("bookName", book);
+        bible.putExtra("bookPosition", position);
+        bible.putExtra("Chapters", chapter);
         context.startActivity(bible);
     }
 
@@ -1278,6 +1290,20 @@ public void syncRemovedHighlights() {
         Intent intent = new Intent(context, bible.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(intent);
+    }
+
+    public int findStringInArray(String[] array, String target) {
+        if (array == null || target == null) {
+            return -1; // Return -1 if the array or target is null
+        }
+
+        for (int i = 0; i < array.length; i++) {
+            if (array[i].equals(target)) {
+                return i; // Return the index if the target is found
+            }
+        }
+
+        return -1; // Return -1 if the target is not found
     }
 
     public void updateLessonDays(List<LessonModels> newLessonDays) {

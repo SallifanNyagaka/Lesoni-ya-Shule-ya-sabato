@@ -94,6 +94,7 @@ public class BibleChapters extends AppCompatActivity implements RecyclerViewClic
         Intent intent = new Intent(getApplicationContext(), Bible_Read.class);
         int rd = position+1;
         intent.putExtra("chapter", chapter + " " + rd);
+        intent.putExtra("Chapters", rd);
 
         ArrayList<Integer> preVerse = new ArrayList<>();
         for (BibleMemory memory: chapterList) {
@@ -112,6 +113,7 @@ public class BibleChapters extends AppCompatActivity implements RecyclerViewClic
         int root = preVerse.get(position);
         intent.putExtra("stopVerse", root);
         intent.putExtra("bookName", file_Name);
+        intent.putExtra("bookPosition", BookPosition);
 
         startActivity(intent);
     }

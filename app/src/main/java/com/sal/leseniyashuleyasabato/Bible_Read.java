@@ -30,18 +30,23 @@ import java.util.List;
 public class Bible_Read extends AppCompatActivity implements RecyclerViewClicks{
     private  List<Books> bible_verses;
 
+    TextView verseTextBox;
     RecyclerView verses;
     RecyclerView.LayoutManager bibleVersesManager;
     ReadAdapter Adapter;
 
-    int bookId;
+    Integer bookId;
 
-    int startVerse;
+    int startVerse, chapter;
     int stopVerse;
+
+    String bookNChapter;
 
     private GestureDetector gestureDetector;
 
     FloatingActionButton right, left;
+
+    BibleStuff stuff = new BibleStuff();
 
 
     @Override
@@ -81,16 +86,19 @@ public class Bible_Read extends AppCompatActivity implements RecyclerViewClicks{
         left = findViewById(R.id.scrollLeftBible);
         Toolbar toolbar = findViewById(R.id.verseToolbar);
         setSupportActionBar(toolbar);
-        TextView verseTextBox = findViewById(R.id.verseTextBox);
+        verseTextBox = findViewById(R.id.verseTextBox);
         Intent get = getIntent();
-        verseTextBox.setText(get.getStringExtra("chapter"));
         int Sverse = get.getIntExtra("verse", 0);
         int to = get.getIntExtra("to", Sverse);
         startVerse = get.getIntExtra("startVerse", 0);
         stopVerse = get.getIntExtra("stopVerse", 0);
         String bookName = get.getStringExtra("bookName");
-        bookId = bookPosition(bookName);
+        bookId = get.getIntExtra("bookPosition", 1);
+        chapter = get.getIntExtra("Chapters", 1);
+        bookNChapter = getBookNameWithoutTXT(bookId) + " " +chapter;
+        verseTextBox.setText(bookNChapter);
 
+        Toast.makeText(this, bookId.toString(), Toast.LENGTH_SHORT ).show();
         BufferedReader versesReader;
         InputStream stream;
 
@@ -163,6 +171,9 @@ public class Bible_Read extends AppCompatActivity implements RecyclerViewClicks{
                         verse = 0;
                         bible_verses.add(new Books(Integer.toString(++verse), buffer));
                         foundNextChapter = true;
+                        chapter = chapter + 1;
+                        bookNChapter = getBookNameWithoutTXT(bookId) + " " + chapter;
+                        verseTextBox.setText(bookNChapter);
                         break;
                     }
                 }
@@ -170,11 +181,24 @@ public class Bible_Read extends AppCompatActivity implements RecyclerViewClicks{
 
             // If no next chapter in the current book, load the first chapter of the next book
             if (!foundNextChapter) {
+                chapter = 0; // Reset chapter to 1 for the next book
                 bookId++;
-                if (bookId >= new BibleStuff().books.length) bookId = 0; // Wrap around
+                if (bookId >= new BibleStuff().books.length) {
+                    // Wrap around to the first book
+                    bookId = 0;
+                    chapter = 0;
+                }
+
+                // Update the book and chapter display
+                bookNChapter = getBookNameWithoutTXT(bookId) + " " + chapter;
+                verseTextBox.setText(bookNChapter);
+
+                // Reset start and stop verses
                 startVerse = 1;
-                stopVerse = Integer.MAX_VALUE; // Until the end of the file
-                loadNextDataset(); // Recursive call for the next book
+                stopVerse = 0;
+
+                // Recursive call for the next book
+                loadNextDataset();
                 return;
             }
 
@@ -186,93 +210,163 @@ public class Bible_Read extends AppCompatActivity implements RecyclerViewClicks{
             }
             stopVerse = lineCount;
 
+            // Initialize verses for display
             initVerses();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
+
     private void loadPreviousDataset() {
         try {
-            // Open the file in read mode
-            InputStream stream = getAssets().open(getBookName(bookId));
-            BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-
-            List<String> allLines = new ArrayList<>();
-            String line;
-
-            // Read all lines into memory
-            while ((line = reader.readLine()) != null) {
-                allLines.add(line);
-            }
-
-            // Close the reader
-            reader.close();
-
-            // Start from the startVerse and read backwards
-            int startPointer = startVerse - 1; // Adjust to 0-based index
-            int stopPointer = startPointer;
-            boolean foundStart = false;
-            List<String> previousChapterLines = new ArrayList<>();
-
-            // Loop backward through the lines
-            for (int i = startPointer - 1; i >= 0; i--) { // Start from the previous line (one before startVerse)
-                line = allLines.get(i);
-
-                // If the line starts with an alphabet and we've already found the start of the previous chapter
-                if (Character.isLetter(line.charAt(0)) && foundStart) {
-                    stopPointer = i; // Stop at this line (include this line)
-                    break;
+            // Check if we're at the first chapter of the current book
+            if (chapter == 1) {
+                // Move to the previous book
+                bookId--;
+                if (bookId < 0) {
+                    // No more books to navigate to
+                    Toast.makeText(this, "Hamna vitabu vingine!", Toast.LENGTH_SHORT).show();
+                    bookId = 0;
+                    return;
                 }
 
-                // Add line to previous chapter lines
-                previousChapterLines.add(line); // Add normally, no need to reverse
-                foundStart = true;
-            }
+                // Open the previous book file
+                InputStream stream = getAssets().open(getBookName(bookId));
+                BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
 
-            // If a previous chapter is found, load it
-            if (foundStart) {
-                int verse = 0;
-                bible_verses.clear();
+                List<String> allLines = new ArrayList<>();
+                String line;
 
-                // Add the line starting with an alphabet (first line of the previous chapter) as the first line
-                String alphabetLine = allLines.get(stopPointer);
-                verse++;
-                bible_verses.add(new Books(Integer.toString(verse), alphabetLine));
-
-                // Add the other previous chapter lines in reverse order
-                Collections.reverse(previousChapterLines);
-                for (String verseLine : previousChapterLines) {
-                    verse++;
-                    bible_verses.add(new Books(Integer.toString(verse), verseLine));
+                // Read all lines from the previous book into memory
+                while ((line = reader.readLine()) != null) {
+                    allLines.add(line);
                 }
 
-                // Update the startVerse and stopVerse correctly
-                startVerse = stopPointer + 1; // The new startVerse is one after the stop pointer
-                stopVerse = startPointer; // The stopVerse is where we ended
+                reader.close();
 
-                initVerses(); // Initialize the verses for display
+                // Find the start of the first chapter in the previous book
+                int firstChapterStart = -1;
+                for (int i = 0; i < allLines.size(); i++) {
+                    if (Character.isLetter(allLines.get(i).charAt(0))) {
+                        firstChapterStart = i;
+                        break;
+                    }
+                }
+
+                if (firstChapterStart != -1) {
+                    // Load the first chapter of the previous book
+                    bible_verses.clear();
+                    int verseCount = 0;
+
+                    for (int i = firstChapterStart; i < allLines.size(); i++) {
+                        String currentLine = allLines.get(i);
+
+                        // Stop when the next chapter begins
+                        if (i > firstChapterStart && Character.isLetter(currentLine.charAt(0))) {
+                            break;
+                        }
+
+                        verseCount++;
+                        bible_verses.add(new Books(Integer.toString(verseCount), currentLine));
+                    }
+
+                    // Update the chapter and verse variables
+                    chapter = 1; // First chapter of the previous book
+                    startVerse = firstChapterStart + 1;
+                    stopVerse = firstChapterStart + verseCount;
+
+                    // Update the book and chapter display
+                    bookNChapter = getBookNameWithoutTXT(bookId) + " " + chapter;
+                    verseTextBox.setText(bookNChapter);
+
+                    // Initialize the verses for display
+                    initVerses();
+                } else {
+                    Toast.makeText(this, "Error loading first chapter of the previous book", Toast.LENGTH_SHORT).show();
+                }
             } else {
-                // If no previous chapter is found, show a Toast
-                Toast.makeText(this, "No previous chapter found!", Toast.LENGTH_SHORT).show();
-            }
+                // We're not at the first chapter; navigate to the previous chapter within the same book
+                InputStream stream = getAssets().open(getBookName(bookId));
+                BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
 
+                List<String> allLines = new ArrayList<>();
+                String line;
+
+                // Read all lines from the current book into memory
+                while ((line = reader.readLine()) != null) {
+                    allLines.add(line);
+                }
+
+                reader.close();
+
+                // Find the start and end of the previous chapter
+                int startPointer = startVerse - 1; // Adjust to 0-based index
+                int stopPointer = startPointer;
+                boolean foundStart = false;
+                List<String> previousChapterLines = new ArrayList<>();
+
+                for (int i = startPointer - 1; i >= 0; i--) {
+                    line = allLines.get(i);
+
+                    // If the line starts with a letter and we've already found the start of the previous chapter
+                    if (Character.isLetter(line.charAt(0)) && foundStart) {
+                        stopPointer = i;
+                        break;
+                    }
+
+                    previousChapterLines.add(line);
+                    foundStart = true;
+                }
+
+                if (foundStart) {
+                    // Found a previous chapter within the current book
+                    int verse = 0;
+                    bible_verses.clear();
+
+                    chapter -= 1; // Move to the previous chapter
+
+                    // Add the line starting with a letter (chapter header) as the first line
+                    String chapterHeader = allLines.get(stopPointer);
+                    verse++;
+                    bible_verses.add(new Books(Integer.toString(verse), chapterHeader));
+
+                    // Add the rest of the previous chapter lines in reverse order
+                    Collections.reverse(previousChapterLines);
+                    for (String verseLine : previousChapterLines) {
+                        verse++;
+                        bible_verses.add(new Books(Integer.toString(verse), verseLine));
+                    }
+
+                    // Update the startVerse and stopVerse
+                    startVerse = stopPointer + 1;
+                    stopVerse = startPointer;
+
+                    // Update the book and chapter display
+                    bookNChapter = getBookNameWithoutTXT(bookId) + " " + chapter;
+                    verseTextBox.setText(bookNChapter);
+
+                    // Initialize the verses for display
+                    initVerses();
+                } else {
+                    Toast.makeText(this, "Error loading previous chapter", Toast.LENGTH_SHORT).show();
+                }
+            }
         } catch (IOException e) {
-            // Handle the exception and show a toast
-            Toast.makeText(this, "Error loading previous dataset", Toast.LENGTH_SHORT).show();
+            // Handle exceptions
+            Toast.makeText(this, "Error loading dataset", Toast.LENGTH_SHORT).show();
             e.printStackTrace();
         }
     }
 
 
 
-
-
-
-
     private String getBookName(int bookId) {
-        BibleStuff stuff = new BibleStuff();
         return "books/" + stuff.books[bookId].toLowerCase().trim() + ".txt";
+    }
+
+    private String getBookNameWithoutTXT(int bookId){
+        return stuff.books[bookId].trim();
     }
 
 
@@ -296,7 +390,7 @@ public class Bible_Read extends AppCompatActivity implements RecyclerViewClicks{
         int position = 0;
 
         for (int i = 0; i<stuff.books.length; i++){
-            if (bookName.contains(stuff.books[i])){
+            if (bookName.equals("books/" + stuff.books[i] + ".txt")){
                 position = i;
                 break;
             }
