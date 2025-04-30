@@ -1,6 +1,5 @@
 package com.sal.leseniyashuleyasabato;
 
-import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 
 import java.util.List;
@@ -33,8 +32,15 @@ public class LessonDaysDiffCallback extends DiffUtil.Callback {
 
     @Override
     public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
-        // Compare contents for equality
-        return oldList.get(oldItemPosition).equals(newList.get(newItemPosition));
+        LessonModels oldItem = oldList.get(oldItemPosition);
+        LessonModels newItem = newList.get(newItemPosition);
+
+        return
+                (oldItem.getDate() != null ? oldItem.getDate().equals(newItem.getDate()) : newItem.getDate() == null) &&
+                        (oldItem.getDay_title() != null ? oldItem.getDay_title().equals(newItem.getDay_title()) : newItem.getDay_title() == null) &&
+                        (oldItem.getDay_content() != null ? oldItem.getDay_content().equals(newItem.getDay_content()) : newItem.getDay_content() == null) &&
+                        (oldItem.getDay_question() != null ? oldItem.getDay_question().equals(newItem.getDay_question()) : newItem.getDay_question() == null);
     }
+
 }
 

@@ -1,23 +1,15 @@
 package com.sal.leseniyashuleyasabato;
 
-import android.widget.Button;
-import android.widget.CompoundButton;
-import android.widget.ToggleButton;
 import com.google.firebase.firestore.CollectionReference;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.SetOptions;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import com.sal.leseniyashuleyasabato.R;
-import android.content.BroadcastReceiver;
+
 import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.text.Editable;
-import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
 import android.text.style.BackgroundColorSpan;
 import android.text.style.StyleSpan;
@@ -30,9 +22,8 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import androidx.appcompat.app.AlertDialog;
 import com.google.firebase.firestore.FirebaseFirestore;
-import java.lang.reflect.Type;
+
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Locale;
 import android.content.Context;
 import android.content.Intent;
@@ -56,6 +47,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
+
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -67,7 +59,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
-    private final List<LessonModels> days;
+    private List<LessonModels> days;
     private Context context;
     private TextToSpeech textToSpeech;
     String tray = "gjjhggdzxjj";
@@ -1307,10 +1299,21 @@ public void syncRemovedHighlights() {
     }
 
     public void updateLessonDays(List<LessonModels> newLessonDays) {
-        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new LessonDaysDiffCallback(this.days, newLessonDays));
-        this.days.clear();
-        this.days.addAll(newLessonDays);
-        diffResult.dispatchUpdatesTo(this);
+        if (days == null || days.isEmpty()) {
+            days = new ArrayList<>(newLessonDays);
+            notifyDataSetChanged();
+        } else {
+            LessonDaysDiffCallback diffCallback = new LessonDaysDiffCallback(days, newLessonDays);
+            DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(diffCallback);
+
+            // ✅ Now dispatch updates to RecyclerView
+            diffResult.dispatchUpdatesTo(this);
+
+            // ✅ Update data before notifying
+            days.clear();
+            days.addAll(newLessonDays);
+        }
     }
+
 
 }

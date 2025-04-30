@@ -16,6 +16,7 @@
     <string name="week_summary_content"> hhhh ,l,lll</string>
     <string name="illustration_image">illustration Image</string>
     <string name="select_week">Select Week</string>
+    <string name="quarterlies">quarterlies</string>
 
     <string-array name="quarter">
         <item>Q1</item>

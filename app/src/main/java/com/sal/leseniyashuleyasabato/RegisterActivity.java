@@ -6,7 +6,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
 import android.widget.ArrayAdapter;
@@ -16,18 +18,40 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.sal.leseniyashuleyasabato.dialogwindow;
+
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class RegisterActivity extends AppCompatActivity {
     private DatabaseReference mDatabase;
@@ -36,6 +60,13 @@ public class RegisterActivity extends AppCompatActivity {
     private ArrayList<String> countryCodes = new ArrayList<>();
     private FirebaseUser user;
     private FirebaseAuth auth;
+
+    EditText phoneNumber;
+
+    Button submit;
+
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
+
 
 
     @Override
@@ -54,12 +85,13 @@ public class RegisterActivity extends AppCompatActivity {
 
         
                 // Check if user is logged in
-        if (user != null && isRegistered == true) {
+        if (user != null && isRegistered) {
             // User is logged in, show log out and add account options
             setContentView(R.layout.activity_logged_in);
 
             Button logoutButton = findViewById(R.id.logoutButton);
             Button addAccountButton = findViewById(R.id.addAccountButton);
+            Button pay = findViewById(R.id.pay);
             
             TextView welcomeText = findViewById(R.id.welcomeText);
             String userEmail = prefs.getString("userEmail", "Haipo/ Non Existent");
@@ -84,12 +116,289 @@ public class RegisterActivity extends AppCompatActivity {
                 Db();  
             });
 
+            pay.setOnClickListener(v -> {
+                showPaymentOptionsDialog();
+            });
+
         } else if (!isRegistered || isLogged) {
             auth.signOut(); // Sign out the user
             editor.putBoolean("isRegistered", false); // Clear registration status
             editor.apply();
             Db();
             }
+    }
+
+    public void showPaymentOptionsDialog() {
+        // Inflate the dialog layout
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View dialogView = inflater.inflate(R.layout.dialog_payment_options, null);
+
+        // Create the AlertDialog
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setView(dialogView);
+
+        // Initialize the buttons
+        Button mpesaButton = dialogView.findViewById(R.id.mpesa_button);
+        Button otherPaymentButton = dialogView.findViewById(R.id.other_payment_button);
+        phoneNumber = dialogView.findViewById(R.id.mpesaNumber);
+        submit = dialogView.findViewById(R.id.mpesaOk);
+
+        submit.setOnClickListener(v -> {
+
+            String unrefinedNumber = phoneNumber.getText().toString();
+
+            if (TextUtils.isEmpty(unrefinedNumber)){
+                dialogwindow.showErrorDialog(RegisterActivity.this, "Nambari ya Simu", "Weka nambari ya simu kwanza.");
+            } else {
+                generateAccessToken(unrefinedNumber);
+            }
+
+
+        });
+
+        // Set click listeners for each button
+        mpesaButton.setOnClickListener(v -> {
+            // Handle M-Pesa payment option
+            initiateMpesaPayment();
+        });
+
+        otherPaymentButton.setOnClickListener(v -> {
+            // Handle other payment methods
+            handleOtherPayments();
+        });
+
+        // Show the dialog
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    public void initiateMpesaPayment() {
+        // Generate the Access Token
+        phoneNumber.setVisibility(View.VISIBLE);
+        submit.setVisibility(View.VISIBLE);
+
+        Toast.makeText(this, "ulichagua Mpesa", Toast.LENGTH_SHORT).show();
+    }
+
+    /*private void generateAccessTokenAsync() {
+        executorService.submit(() -> {
+            // Perform the network request on a background thread
+            String token = generateAccessToken();
+
+            // If the token is successfully retrieved, make the STK push request
+            if (token != null) {
+                runOnUiThread(() -> makeStkPushRequest(token));
+            } else {
+                runOnUiThread(() -> Toast.makeText(getApplicationContext(), "Failed to get access token", Toast.LENGTH_SHORT).show());
+            }
+        });
+    }*/
+
+
+    public void generateAccessToken(String unrefinedNumber) {
+
+            OkHttpClient client = new OkHttpClient();
+
+            // Prepare the request
+            Request request = new Request.Builder()
+                    .url("https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials")
+                    .method("GET", null)
+                    .addHeader("Authorization", "Basic UnpHR3FMdmZPc3RQZzFueThYdTFXdG9yQWJoaFByaWNhVDJUV09ha2RRQ21uSzhtOm55MklWWU5NeUtYRVZ3TE4weUdRWVZSVkVoZFNjQVRURXFxb3U2Rmpra050eU55MzFtUjd6QVhrQkdvZ0pmTmQ=")
+                    .build();
+
+            // Decode and log the Authorization header (for verification)
+            decodeAuthorizationHeader("UnpHR3FMdmZPc3RQZzFueThYdTFXdG9yQWJoaFByaWNhVDJUV09ha2RRQ21uSzhtOm55MklWWU5NeUtYRVZ3TE4weUdRWVZSVkVoZFNjQVRURXFxb3U2Rmpra050eU55MzFtUjd6QVhrQkdvZ0pmTmQ=");
+
+            // Execute the request
+            client.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(getApplicationContext(), "Failed to generate access token", Toast.LENGTH_SHORT).show();
+                    });
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException {
+                    if (response.isSuccessful()) {
+                        String responseBody = response.body().string();
+                        String accessToken = parseAccessToken(responseBody);
+
+                        if (accessToken != null) {
+
+                            runOnUiThread(() -> {
+                                // Use the token to make the STK Push request
+                                makeStkPushRequest(accessToken, unrefinedNumber);
+                            });
+                        } else {
+                            runOnUiThread(() -> {
+                                Toast.makeText(getApplicationContext(), "Failed to parse access token", Toast.LENGTH_SHORT).show();
+                            });
+                        }
+                    } else {
+                        String errorResponse = response.body() != null ? response.body().string() : "No error response body";
+                        Log.e("M-Pesa Error", "Response Code: " + response.code() + " Error: " + errorResponse);
+                        runOnUiThread(() -> {
+                            Toast.makeText(getApplicationContext(), "Error generating token", Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                }
+            });
+
+    }
+
+    // Method to decode Base64 Authorization header and log the credentials
+    private void decodeAuthorizationHeader(String encodedHeader) {
+        try {
+            byte[] decodedBytes = Base64.decode(encodedHeader, Base64.DEFAULT);
+            String decodedString = new String(decodedBytes);
+            Log.d("Authorization Header", "Decoded Credentials: " + decodedString);
+        } catch (Exception e) {
+            Log.e("Decode Error", "Failed to decode Authorization header", e);
+        }
+    }
+
+    // Method to parse access token from the response
+    private String parseAccessToken(String response) {
+        try {
+            JSONObject jsonObject = new JSONObject(response);
+            return jsonObject.getString("access_token");
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // Make the STK Push request
+    private void makeStkPushRequest(String accessToken, String unrefinedNumber) {
+
+        OkHttpClient client = new OkHttpClient();
+        // Generate the timestamp
+        String timestamp = new SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault()).format(new Date());
+        String businessShortCode = "174379"; // From your provided details
+        String passKey = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"; // Simulation passkey
+        String password = Base64.encodeToString((businessShortCode + passKey + timestamp).getBytes(), Base64.NO_WRAP);
+        String mpesaNumber = formatPhoneNumber(unrefinedNumber);
+
+
+
+        // Define the request body using your simulation details
+        String requestBody = "{"
+                + "\"BusinessShortCode\": \"" + businessShortCode + "\","
+                + "\"Password\": \"" + password + "\","
+                + "\"Timestamp\": \"" + timestamp + "\","
+                + "\"TransactionType\": \"CustomerPayBillOnline\","
+                + "\"Amount\": 20," // Simulation amount
+                + "\"PartyA\":"+ mpesaNumber +"," // Customer phone number (from your details)
+                + "\"PartyB\": \"" + businessShortCode + "\","
+                + "\"PhoneNumber\":"+ mpesaNumber +"," // Same as PartyA
+                + "\"CallBackURL\": \"https://mydomain.com/path\"," // Callback URL (ensure it is valid for receiving responses)
+                + "\"AccountReference\": \"CompanyXLTD\"," // Reference for the transaction
+                + "\"TransactionDesc\": \"Payment of X\"" // Description of the transaction
+                + "}";
+
+        Toast.makeText(RegisterActivity.this, accessToken, Toast.LENGTH_LONG).show();
+
+        // Create the request
+        Request request = new Request.Builder()
+                .url("https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest")
+                .method("POST", RequestBody.create(MediaType.parse("application/json"), requestBody))
+                .addHeader("Authorization", "Bearer " + accessToken)
+                .build();
+
+        // Execute the request
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(getApplicationContext(), "Payment initiation failed", Toast.LENGTH_SHORT).show());
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(getApplicationContext(), "Payment initiated successfully", Toast.LENGTH_SHORT).show();
+                        updateUserPaymentStatus();
+                    } );
+                } else {
+                    String errorResponse = response.body() != null ? response.body().string() : "No response body";
+                    Log.e("M-Pesa Error", "Response Code: " + response.code() + " Error: " + errorResponse);
+                    runOnUiThread(() -> Toast.makeText(getApplicationContext(), "Payment initiation failed", Toast.LENGTH_SHORT).show());
+                }
+            }
+        });
+    }
+
+    /**
+     * Formats a phone number to the required format (e.g., 254115157312).
+     *
+     * @param rawPhoneNumber The raw phone number input by the user.
+     * @return The formatted phone number or null if invalid.
+     */
+    private String formatPhoneNumber(String rawPhoneNumber) {
+        rawPhoneNumber = rawPhoneNumber.replace("+", "").trim(); // Remove "+"
+
+        // Remove leading zero if present
+        if (rawPhoneNumber.startsWith("0")) {
+            rawPhoneNumber = rawPhoneNumber.substring(1);
+        }
+
+        // Prepend country code
+        String countryCode = "254"; // For Kenya, modify as needed
+        rawPhoneNumber = countryCode + rawPhoneNumber;
+
+        // Validate the final phone number
+        if (rawPhoneNumber.length() != 12 || !rawPhoneNumber.matches("\\d+")) {
+            return null; // Invalid number
+        }
+
+        return rawPhoneNumber;
+    }
+
+    private void updateUserPaymentStatus() {
+        // Retrieve the current user's email from SharedPreferences
+        SharedPreferences sharedPreferences = getSharedPreferences("MyAppPrefs", MODE_PRIVATE);
+        String currentEmail = sharedPreferences.getString("userEmail", "");
+
+        if (currentEmail.isEmpty()) {
+            Toast.makeText(this, "Failed to update payment status. Email not found.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Find the user in the Realtime Database by email and update their payment status
+        DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("users");
+
+        usersRef.orderByChild("email").equalTo(currentEmail).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    for (DataSnapshot userSnapshot : dataSnapshot.getChildren()) {
+                        // Update the paymentStatus field to "Paid"
+                        userSnapshot.getRef().child("paymentStatus").setValue("Paid")
+                                .addOnSuccessListener(aVoid ->
+                                        Toast.makeText(getApplicationContext(), "Payment status updated successfully!", Toast.LENGTH_SHORT).show())
+                                .addOnFailureListener(e ->
+                                        Toast.makeText(getApplicationContext(), "Failed to update payment status.", Toast.LENGTH_SHORT).show());
+                    }
+                } else {
+                    Toast.makeText(getApplicationContext(), "User not found.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                Toast.makeText(getApplicationContext(), "Error: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+
+
+    public void handleOtherPayments() {
+        // Handle other payment options here (e.g., Airtel Money, PayPal, etc.)
+        // You can display another dialog or start a new activity for these options.
+        Toast.makeText(this, "Other Payment Methods Selected", Toast.LENGTH_SHORT).show();
     }
     
    private void Db(){
@@ -110,8 +419,9 @@ public class RegisterActivity extends AppCompatActivity {
             Button registerButton = findViewById(R.id.registerButton);
             TextView registeredButton = findViewById(R.id.registered);
             TextView skipButton = findViewById(R.id.skipButton);
-            
-            
+
+
+
             // Load the countries from the JSON file
             loadCountriesFromJson();
 
@@ -227,17 +537,17 @@ public class RegisterActivity extends AppCompatActivity {
                                  
 
             // Set onClickListener for the skip button    
-            skipButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    // Skip action (e.g., navigate to another activity)
-                    editor.putBoolean("isRegistered", true);
-                    editor.apply();
-                    Toast.makeText(RegisterActivity.this, "Haujasajiliwa", Toast.LENGTH_SHORT).show();
-                    Intent intent = new Intent(RegisterActivity.this, MainActivity.class);
-                    startActivity(intent);
-                    finish();
-                }
+            skipButton.setOnClickListener(v1 -> {
+                // Skip action (e.g., navigate to another activity)
+                Toast.makeText(RegisterActivity.this, "Haujasajiliwa", Toast.LENGTH_SHORT).show();
+                /*editor.putBoolean("isRegistered", true);
+                editor.putString("userEmail", "noEmail@sadontechs.com");  // Assuming userEmail contains the email
+                editor.apply();
+                editor.apply();
+
+                Intent intent = new Intent(RegisterActivity.this, MainActivity.class);
+                startActivity(intent);
+                finish();*/
             });
         }
         });

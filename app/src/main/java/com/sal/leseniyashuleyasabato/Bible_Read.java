@@ -3,9 +3,12 @@ package com.sal.leseniyashuleyasabato;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.os.Handler;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -45,6 +48,10 @@ public class Bible_Read extends AppCompatActivity implements RecyclerViewClicks{
     private GestureDetector gestureDetector;
 
     FloatingActionButton right, left;
+
+    private Handler hideFabHandler;
+    private Runnable hideFabRunnable;
+
 
     BibleStuff stuff = new BibleStuff();
 
@@ -98,6 +105,44 @@ public class Bible_Read extends AppCompatActivity implements RecyclerViewClicks{
         bookNChapter = getBookNameWithoutTXT(bookId) + " " +chapter;
         verseTextBox.setText(bookNChapter);
 
+        hideFabHandler = new Handler();
+        hideFabRunnable = new Runnable() {
+            @Override
+            public void run() {
+                left.setVisibility(View.GONE);
+                right.setVisibility(View.GONE);
+            }
+        };
+
+        // Detect touch events
+        final GestureDetector gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onSingleTapUp(MotionEvent e) {
+                showFABs();
+                return super.onSingleTapUp(e);
+            }
+        });
+
+        View rootView = findViewById(R.id.contents);
+        rootView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                gestureDetector.onTouchEvent(event);
+                return true;
+            }
+        });
+
+        
+        // Detect scroll events on RecyclerView
+        RecyclerView recyclerView = findViewById(R.id.readBibleRecyc);
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                showFABs();
+            }
+        });
+
+
         Toast.makeText(this, bookId.toString(), Toast.LENGTH_SHORT ).show();
         BufferedReader versesReader;
         InputStream stream;
@@ -146,6 +191,22 @@ public class Bible_Read extends AppCompatActivity implements RecyclerViewClicks{
         return super.onTouchEvent(event);
     }
 
+    private void showFABs() {
+        left.setVisibility(View.VISIBLE);
+        right.setVisibility(View.VISIBLE);
+
+        // Reset the hide timer
+        hideFabHandler.removeCallbacks(hideFabRunnable);
+        hideFabHandler.postDelayed(hideFabRunnable, 2000); // Hide after 3 seconds of inactivity
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (hideFabHandler != null) {
+            hideFabHandler.removeCallbacks(hideFabRunnable);
+        }
+    }
 
     private void loadNextDataset() {
         try {

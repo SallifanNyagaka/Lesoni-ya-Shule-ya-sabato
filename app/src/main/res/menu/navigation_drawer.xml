@@ -5,4 +5,10 @@
             <item android:icon="@drawable/ic_admin" android:id="@+id/admin_section" android:title="@string/administrator"/>
         </menu>
     </item>
+
+    <item android:title="@string/quarterlies">
+        <menu>
+            <item android:icon="@drawable/ic_quarterlies" android:id="@+id/quarterlies" android:title="@string/administrator"/>
+        </menu>
+    </item>
 </menu>

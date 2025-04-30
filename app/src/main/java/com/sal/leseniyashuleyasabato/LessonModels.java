@@ -1,5 +1,7 @@
 package com.sal.leseniyashuleyasabato;
 
+import java.util.Objects;
+
 public class LessonModels {
     private final String date;
     private final String dateEng;
@@ -9,8 +11,21 @@ public class LessonModels {
     private final String day_title;
     private final int share_image;
     private final String saturday_image_uri;
-    
-    
+
+    // Add this constructor so Gson or Firestore can instantiate the class
+    public LessonModels() {
+        this.date = null;
+        this.dateEng = null;
+        this.weekRange = null;
+        this.share_image = 0;
+        this.day_title = null;
+        this.day_content = null;
+        this.day_question = null;
+        this.saturday_image_uri = null;
+    }
+
+
+
     public LessonModels(String date, String dateEng, String weekRange, int share_image, String day_title, String day_content, String day_question, String saturday_image_uri) {
         this.date = date;
         this.dateEng = dateEng;
@@ -54,4 +69,30 @@ public class LessonModels {
     public String getSaturday_image_uri() {
         return this.saturday_image_uri;
     }
+
+
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+
+        LessonModels that = (LessonModels) obj;
+        return share_image == that.share_image &&
+                date.equals(that.date) &&
+                dateEng.equals(that.dateEng) &&
+                weekRange.equals(that.weekRange) &&
+                day_title.equals(that.day_title) &&
+                day_content.equals(that.day_content) &&
+                day_question.equals(that.day_question) &&
+                ((saturday_image_uri == null && that.saturday_image_uri == null) ||
+                        (saturday_image_uri != null && saturday_image_uri.equals(that.saturday_image_uri)));
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(date, dateEng, weekRange, day_title, day_content, day_question, share_image, saturday_image_uri);
+    }
+
+
 }

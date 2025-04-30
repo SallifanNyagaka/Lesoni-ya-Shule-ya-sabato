@@ -107,6 +107,7 @@
         <!-- Skip Button -->
         <TextView
             android:id="@+id/skipButton"
+            android:visibility="gone"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Ruka Usajili kwa sasa/Skip Registration for now"
@@ -126,6 +127,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             android:layout_marginTop="10dp"/>
+
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

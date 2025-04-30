@@ -12,6 +12,7 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ToggleButton;
@@ -30,6 +31,10 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.core.content.ContextCompat;
+
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.SetOptions;
 import com.yalantis.ucrop.UCrop;
 import com.yalantis.ucrop.view.CropImageView;
 import java.text.SimpleDateFormat;
@@ -61,9 +66,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.time.Year;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -111,6 +121,8 @@ public class admin extends AppCompatActivity implements DatePickerDialog.OnDateS
     private final String FIELD_CONTENT = FirebaseAnalytics.Param.CONTENT;
     private final String FIELD_QUESTION = "question";
 
+    private EditText yearInput;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -118,6 +130,9 @@ public class admin extends AppCompatActivity implements DatePickerDialog.OnDateS
 
         Button datePickerButton = findViewById(R.id.date_picker);
         Button uploadButton = findViewById(R.id.upload);
+        Button addQuarterButton = findViewById(R.id.addQuarterButton);
+        yearInput = findViewById(R.id.yearInput);
+        Button uploadYear = findViewById(R.id.addYearButton);
         final TextView uploadStatusTextView = findViewById(R.id.uploader_status);
         this.titleEditText = findViewById(R.id.title);
         this.QuarterIntroduction = findViewById(R.id.QuarterIntroduction);
@@ -135,7 +150,7 @@ public class admin extends AppCompatActivity implements DatePickerDialog.OnDateS
         this.edit_button = findViewById(R.id.edit_button);
         Button quarterTitleUpload = findViewById(R.id.quarterTitleupload);
         LinearLayout parentLayout = findViewById(R.id.parent); // root layout ID
-        
+
         quarterTitleUpload.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
@@ -202,12 +217,23 @@ public class admin extends AppCompatActivity implements DatePickerDialog.OnDateS
                 admin.this.uploadContent(uploadStatusTextView);
             }
         });
+
+        addQuarterButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                addQuarter();
+            }
+        });
         
         upload_teacher.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 uploadTeacherContent(uploadStatusTextView);
             }
+        });
+
+        uploadYear.setOnClickListener(v ->{
+            addYear();
         });
 
         datePickerButton.setOnClickListener(new View.OnClickListener() {
@@ -469,6 +495,7 @@ editButton.setOnClickListener(view -> {
         }
     }
 
+
     private File createImageFile() throws IOException {
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String imageFileName = "JPEG_" + timeStamp + "_";
@@ -585,9 +612,101 @@ private void startCrop(Uri uri) {
             Log.e("TextRecognition", "Error: ", e);
         });
 }
-    
- 
- private void uploadContent(final TextView statusTextView) {
+
+    private void addYear() {
+        String newYear = yearInput.getText().toString().trim(); // Trim whitespace
+
+        if (newYear.isEmpty()) {
+            Toast.makeText(admin.this, "Please enter a valid year!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        FirebaseFirestore firestore = FirebaseFirestore.getInstance();
+        DocumentReference yearDocRef = firestore.collection("All_Years").document("years_list");
+
+        yearDocRef.get().addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                List<String> years = (List<String>) documentSnapshot.get("years");
+                if (years == null) {
+                    years = new ArrayList<>();
+                }
+
+                if (!years.contains(newYear)) {
+                    years.add(newYear);
+                    yearDocRef.update("years", years)
+                            .addOnSuccessListener(aVoid ->
+                                    Toast.makeText(admin.this, "Year added successfully!", Toast.LENGTH_SHORT).show())
+                            .addOnFailureListener(e ->
+                                    Toast.makeText(admin.this, "Failed to add year: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                } else {
+                    Toast.makeText(admin.this, "Year already exists!", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                // Create document with the first year if it does not exist
+                Map<String, Object> data = new HashMap<>();
+                data.put("years", Arrays.asList(newYear));
+                yearDocRef.set(data)
+                        .addOnSuccessListener(aVoid ->
+                                Toast.makeText(admin.this, "Year added successfully!", Toast.LENGTH_SHORT).show())
+                        .addOnFailureListener(e ->
+                                Toast.makeText(admin.this, "Failed to add year: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            }
+        }).addOnFailureListener(e ->
+                Toast.makeText(admin.this, "Error fetching data: " + e.getMessage(), Toast.LENGTH_LONG).show());
+    }
+
+    private void addQuarter() {
+        String selectedYear = yearInput.getText().toString().trim();
+        String selectedQuarter = quarterSpinner.getSelectedItem().toString(); // Get selected quarter
+
+        if (selectedYear.isEmpty()) {
+            Toast.makeText(admin.this, "Please enter a valid year!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (selectedQuarter.isEmpty()) {
+            Toast.makeText(admin.this, "Please select a valid quarter!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        FirebaseFirestore firestore = FirebaseFirestore.getInstance();
+        DocumentReference yearDocRef = firestore.collection("All_Quarters").document(selectedYear);
+
+        yearDocRef.get().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                DocumentSnapshot document = task.getResult();
+
+                List<String> quartersList = new ArrayList<>();
+                if (document.exists() && document.contains("quarters")) {
+                    quartersList = (List<String>) document.get("quarters"); // Get existing quarters list
+                }
+
+                if (!quartersList.contains(selectedQuarter)) {
+                    quartersList.add(selectedQuarter); // Add new quarter
+
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("year", selectedYear);
+                    data.put("quarters", quartersList);
+                    data.put("created_at", FieldValue.serverTimestamp());
+
+                    yearDocRef.set(data, SetOptions.merge())
+                            .addOnSuccessListener(aVoid ->
+                                    Toast.makeText(admin.this, "Quarter added successfully!", Toast.LENGTH_SHORT).show())
+                            .addOnFailureListener(e ->
+                                    Toast.makeText(admin.this, "Failed to add quarter: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                } else {
+                    Toast.makeText(admin.this, "Quarter already exists!", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                Toast.makeText(admin.this, "Error checking year: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+
+
+
+    private void uploadContent(final TextView statusTextView) {
         String title = titleEditText.getText().toString();
         String content = contentEditText.getText().toString();
         String question = questionEditText.getText().toString();
@@ -604,6 +723,13 @@ private void startCrop(Uri uri) {
             statusTextView.setText("Please fill in all fields.");
             return;
         }
+
+        /*String quarterYear = yearInput.getText().toString().trim(); // Trim whitespace
+
+        if (quarterYear.isEmpty()) {
+            Toast.makeText(admin.this, "Please enter a valid year!", Toast.LENGTH_SHORT).show();
+            return;
+        }*/
         
         final Map<String, Object> dayContent = new HashMap<>();
         dayContent.put(FIELD_TITLE, title);
@@ -617,8 +743,17 @@ private void startCrop(Uri uri) {
 
         final DocumentReference weekRef = firestoreDatabase.collection("quarters_"+ dateFormat.format(date))
                 .document(selectedQuarter).collection("weeks").document(selectedWeek);
-        
-        if(calender.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
+
+
+     /*final DocumentReference weekRef = firestoreDatabase.collection("All_Quarters")
+             .document(Integer.toString(selectedYear))
+             .collection("quarters")
+             .document(selectedQuarter)
+             .collection("weeks")
+             .document(selectedWeek);*/
+
+
+     if(calender.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
             final Map<String, Object> wk_Title = new HashMap<>();
             wk_Title.put("week_Title", title);
             wk_Title.put("timeStamp", timestamp);
@@ -677,7 +812,7 @@ private void startCrop(Uri uri) {
         dayContent.put("dateEng", currentDateStringEnglish);
         dayContent.put("weekDateRange", weekContentRange);
 
-        final DocumentReference weekRef = firestoreDatabase.collection("quarters_"+calender.get(Calendar.YEAR))
+        final DocumentReference weekRef = firestoreDatabase.collection("quarters_"+ selectedYear)//calender.get(Calendar.YEAR))
                 .document(selectedQuarter).collection("weeks").document(selectedWeek);
         
         weekRef.collection("teacher").document("Teacher_Comments")
@@ -772,9 +907,16 @@ public void onDateSet(DatePicker datePicker, int year, int month, int day) {
     int dayOfWeek = calender.get(Calendar.DAY_OF_WEEK);
     String dayOfWeekSwahili = swahiliDays[dayOfWeek - 1];
     String monthSwahili = swahiliMonths[month];
-    this.currentDateStringEnglish = DateFormat.getDateInstance(DateFormat.FULL).format(calender.getTime());
+
+    this.selectedYear = year;
+    this.selectedMonth = month + 1; // month + 1 because Calendar.MONTH is 0-indexed
+    this.selectedDay = day;
+    this.selectedWeekDay = dayOfWeek;
+
+    DateFormat dateFormat = new SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.ENGLISH);
+    this.currentDateStringEnglish = dateFormat.format(calender.getTime());
     // Construct the Swahili date string for the selected date
-    this.currentDateString = dayOfWeekSwahili + " " + day + " " + monthSwahili + " " + year;
+    this.currentDateString = dayOfWeekSwahili + " " + day + " " + monthSwahili + " " + selectedYear;
 
     // Calculate the start date (Saturday)
     Calendar startCal = (Calendar) calender.clone();
@@ -798,15 +940,11 @@ public void onDateSet(DatePicker datePicker, int year, int month, int day) {
         weekRangeString = startMonthSwahili + " " + startDay + " - " + endMonthSwahili + " " + endDay;
     }
 
+
     // Store the week range in a variable (for example, weekContentRange)
     Calendar cal = Calendar.getInstance();
-    weekContentRange = weekRangeString + " ," + cal.get(Calendar.YEAR);
+    weekContentRange = weekRangeString + " ," + selectedYear; //cal.get(Calendar.YEAR);
 
-    // Update other variables as needed
-    this.selectedYear = year;
-    this.selectedMonth = month + 1; // month + 1 because Calendar.MONTH is 0-indexed
-    this.selectedDay = day;
-    this.selectedWeekDay = dayOfWeek;
 
     if (dayOfWeek == Calendar.SATURDAY) {
         this.selectedSaturday = this.currentDateString;

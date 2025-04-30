@@ -26,4 +26,11 @@
         android:layout_height="wrap_content"
         android:text="Ongeza Akaunti nyingine/Add Another Account"
         android:layout_marginTop="16dp" />
+
+    <Button
+        android:id="@+id/pay"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="lipa"
+        android:layout_marginTop="16dp" />
 </LinearLayout>

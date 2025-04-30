@@ -127,6 +127,8 @@ public class AdminLoginActivity extends AppCompatActivity {
 
                                 // Redirect to AdminSettingsActivity
                                 Intent intent = new Intent(AdminLoginActivity.this, admin.class);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                                 startActivity(intent);
                                 finish();
                             } else {
