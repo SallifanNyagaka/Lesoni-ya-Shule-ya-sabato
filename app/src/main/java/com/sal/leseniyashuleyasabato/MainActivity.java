@@ -30,10 +30,13 @@ import androidx.annotation.NonNull;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.Source;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.ArrayList;
@@ -502,114 +505,50 @@ btnOpenFragment.setOnClickListener(new View.OnClickListener() {
         }
     }
 
-    /*private void fetchLessonsWithoutLiveData(String year, String quarter, int currentPosition) {
-        int spinPos = currentPosition + 1;
-        String teacherPathName = "quarters_" + year + "/" + quarter + "/weeks/WK-" + spinPos + "/teacher";
-        String lessonPathName = "quarters_" + year + "/" + quarter + "/weeks/WK-" + spinPos + "/days";
-
-        Log.d("MainActivity", "Fetching lessons from: " + lessonPathName);
-
-        LessonRepository lessonRepository = new LessonRepository();
-
-        lessonRepository.fetchLessonData(year, choosenQuarter, "WK-" + 1, new LessonRepository.LessonDataCallback() {
-            @Override
-            public void onLessonDataLoaded(List<LessonModels> newLessonDays) {
-                Log.d("MainActivity", "Lesson data loaded, updating adapter.");
-
-                // 🔥 Initialize Adapter with updated paths
-                lesson_adapter = new Adapter(newLessonDays, MainActivity.this, teacherPathName, lessonPathName);
-                day = findViewById(R.id.wk_day);
-                wk_day_manager = new LinearLayoutManager(getApplicationContext());
-                day.setLayoutManager(wk_day_manager);
-                day.setAdapter(lesson_adapter);
-            }
-        });
-    } */
-
-
-    /*private void fetchLessonForSelectedWeek(String selectedWeekId) {
-        Map<String, Object> yearData = sharedPrefsManager.getLessonDataForYear(choosenYear);
-
-        if (yearData != null && yearData.containsKey(choosenQuarter)) {
-            Map<String, Object> quarterData = (Map<String, Object>) yearData.get(choosenQuarter);
-
-            if (quarterData.containsKey(selectedWeekId)) {
-                List<LessonModels> lessonDays = (List<LessonModels>) quarterData.get(selectedWeekId);
-
-                // Update RecyclerView with the fetched lesson days
-                lesson_adapter.updateLessonDays(lessonDays);
-            } else {
-                Log.e("MainActivity", "No data found for week " + selectedWeekId);
-            }
-        } else {
-            Log.e("MainActivity", "No data found for quarter " + choosenQuarter);
-        }
-    }*/
-
-
-    /*private void loadLessonsForSelectedWeek(String selectedWeek) {
-        Map<String, Object> yearData = sharedPrefsManager.getLessonDataForYear(choosenYear);
-
-        if (yearData != null && yearData.containsKey(choosenQuarter)) {
-            Map<String, Object> quarterData = (Map<String, Object>) yearData.get(choosenQuarter);
-
-            if (quarterData.containsKey(selectedWeek)) {
-                List<Map<String, Object>> weekLessons = (List<Map<String, Object>>) quarterData.get(selectedWeek);
-                List<LessonModels> lessonList = new ArrayList<>();
-
-                for (Map<String, Object> lessonData : weekLessons) {
-                    lessonList.add(new LessonModels(
-                            (String) lessonData.get("date"),
-                            (String) lessonData.get("dateEng"),
-                            (String) lessonData.get("weekDateRange"),
-                            R.drawable.share_today,
-                            (String) lessonData.get("title"),
-                            (String) lessonData.get("content"),
-                            (String) lessonData.get("question"),
-                            (String) lessonData.get("image_url")
-                    ));
-                }
-
-                // Update RecyclerView with lesson data
-                lesson_adapter.updateLessonDays(lessonList);
-            } else {
-                Log.e("MainActivity", "Week " + selectedWeek + " not found in SharedPreferences");
-            }
-        }
-    }*/
-
-
 //new changes
 private void fetchDaysForWeek(String year, String quarter, String selectedWeekId) {
     Log.d("FetchDays", "Fetching days for Year: " + year + ", Quarter: " + quarter + ", WeekID: " + selectedWeekId);
 
     if (isNetworkAvailable(MainActivity.this)) {
-        Log.d("FetchDays", "Network available, fetching from Firestore.");
-        fetchDaysFromFirestore(year, quarter, selectedWeekId); // Will update SharedPrefs
+        Log.d("FetchDays", "✅ Network available, fetching from Firestore.");
+        fetchDaysFromFirestore(year, quarter, selectedWeekId); // This updates SharedPrefs as well
     } else {
-        Log.d("FetchDays", "Network unavailable, trying SharedPreferences.");
+        Log.d("FetchDays", "❌ Network unavailable, trying SharedPreferences.");
+
+        // 🔁 Get updated structure from SharedPreferences
         Map<String, Object> yearData = sharedPrefsManager.getLessonDataForYear(year);
-        if (yearData == null) {
-            Log.e("FetchDays", "Year data not found in SharedPreferences for year: " + year);
+        if (yearData == null || yearData.isEmpty()) {
+            Log.e("FetchDays", "⚠️ Year data not found or empty in SharedPreferences for year: " + year);
             return;
         }
 
-        Map<String, Object> quarterData = (Map<String, Object>) yearData.get(quarter);
-        if (quarterData == null) {
-            Log.e("FetchDays", "Quarter data not found in SharedPreferences for quarter: " + quarter);
+        Map<String, List<LessonModels>> quarterData = (Map<String, List<LessonModels>>) yearData.get(quarter);
+        if (quarterData == null || quarterData.isEmpty()) {
+            Log.e("FetchDays", "⚠️ Quarter data not found or empty in SharedPreferences for quarter: " + quarter);
             return;
         }
 
-        Log.d("FetchDays", "Available week keys in SharedPrefs: " + quarterData.keySet());
+        Log.d("FetchDays", "📌 Available week keys in SharedPrefs: " + quarterData.keySet());
 
         if (!quarterData.containsKey(selectedWeekId)) {
-            Log.e("FetchDays", "Week ID '" + selectedWeekId + "' not found in quarter data.");
+            Log.e("FetchDays", "🚫 Week ID '" + selectedWeekId + "' not found in quarter data.");
             return;
         }
 
-        fetchDaysFromSharedPrefs(year, quarter, selectedWeekId);
+        // ✅ Use local data
+        List<LessonModels> lessons = quarterData.get(selectedWeekId);
+        if (lessons != null && !lessons.isEmpty()) {
+            lesson_days.clear();
+            lesson_days.addAll(lessons);
+            lesson_adapter.notifyDataSetChanged();
+            Toast.makeText(MainActivity.this, "📦 Loaded from SharedPrefs", Toast.LENGTH_SHORT).show();
+        } else {
+            Log.e("FetchDays", "⚠️ No lessons found for week ID: " + selectedWeekId);
+        }
     }
 }
+
+
 
 
     private void printLessonDataForYear(String year) {
@@ -622,37 +561,37 @@ private void fetchDaysForWeek(String year, String quarter, String selectedWeekId
 
         for (Map.Entry<String, Object> quarterEntry : yearData.entrySet()) {
             String quarter = quarterEntry.getKey();
-            Log.d("LessonDataPrinter", "Quarter: " + quarter);
-
-            // 🔥 Fetch and print the Week Titles for this quarter
-            List<String> weekTitles = sharedPrefsManager.getWeekTitles(year, quarter);
-            if (weekTitles != null && !weekTitles.isEmpty()) {
-                Log.d("LessonDataPrinter", "  Week Titles:");
-                for (String title : weekTitles) {
-                    Log.d("LessonDataPrinter", "    - " + title);
-                }
-            } else {
-                Log.d("LessonDataPrinter", "  No week titles found for quarter: " + quarter);
-            }
+            Log.d("LessonDataPrinter", "📘 Quarter: " + quarter);
 
             Map<String, Object> quarterData = (Map<String, Object>) quarterEntry.getValue();
             if (quarterData != null) {
                 for (Map.Entry<String, Object> weekEntry : quarterData.entrySet()) {
                     String weekId = weekEntry.getKey();
-                    Log.d("LessonDataPrinter", "  Week ID: " + weekId);
+                    Log.d("LessonDataPrinter", "  📗 Week ID: " + weekId);
 
-                    Object weekData = weekEntry.getValue();
-                    if (weekData != null) {
-                        Log.d("LessonDataPrinter", "    Week Data: " + weekData.toString());
+                    List<LessonModels> lessons = (List<LessonModels>) weekEntry.getValue();
+                    if (lessons != null && !lessons.isEmpty()) {
+                        for (LessonModels lesson : lessons) {
+                            Log.d("LessonDataPrinter", "    📅 Date: " + lesson.getDate());
+                            Log.d("LessonDataPrinter", "    🗓️ DateEng: " + lesson.getDateEng());
+                            Log.d("LessonDataPrinter", "    📆 Week Range: " + lesson.getWeekRange());
+                            Log.d("LessonDataPrinter", "    📝 Title: " + lesson.getDay_title());
+                            Log.d("LessonDataPrinter", "    📖 Content: " + lesson.getDay_content());
+                            Log.d("LessonDataPrinter", "    ❓ Question: " + lesson.getDay_question());
+                            Log.d("LessonDataPrinter", "    🖼️ Image URL: " + lesson.getSaturday_image_uri());
+                            Log.d("LessonDataPrinter", "    ----------------------------------------");
+                        }
                     } else {
-                        Log.e("LessonDataPrinter", "    Week data is null for weekId: " + weekId);
+                        Log.d("LessonDataPrinter", "    🚫 No lessons found for this week.");
                     }
                 }
             } else {
-                Log.e("LessonDataPrinter", "  Quarter data is null for quarter: " + quarter);
+                Log.e("LessonDataPrinter", "  ⚠️ Quarter data is null for quarter: " + quarter);
             }
         }
     }
+
+
 
 
 
@@ -666,53 +605,47 @@ private void fetchDaysForWeek(String year, String quarter, String selectedWeekId
                 .collection("days")
                 .get()
                 .addOnSuccessListener(snapshot -> {
-                    List<Map<String, Object>> weekLessonsData = new ArrayList<>(); // Renamed for clarity
+                    List<LessonModels> lessonList = new ArrayList<>();
 
                     for (QueryDocumentSnapshot doc : snapshot) {
-                        weekLessonsData.add(doc.getData());
-                    }
-
-                    // ✅ Convert to LessonModels
-                    List<LessonModels> lessonList = new ArrayList<>();
-                    for (Map<String, Object> lessonData : weekLessonsData) {
                         lessonList.add(new LessonModels(
-                                (String) lessonData.get("date"),
-                                (String) lessonData.get("dateEng"),
-                                (String) lessonData.get("weekDateRange"),
+                                doc.getString("date"),
+                                doc.getString("dateEng"),
+                                doc.getString("weekDateRange"),
                                 R.drawable.share_today,
-                                (String) lessonData.get("title"),
-                                (String) lessonData.get("content"),
-                                (String) lessonData.get("question"),
-                                (String) lessonData.get("image_url")
+                                doc.getString("title"),
+                                doc.getString("content"),
+                                doc.getString("question"),
+                                doc.getString("image_url")
                         ));
                     }
 
-                    // ✅ Save to SharedPrefs
-                    sharedPrefsManager.saveDaysForWeek(year, quarter, weekId, lessonList); // Using the correct List<LessonModels>
+                    // ✅ Sort list by English date (e.g., "Thursday, October 3, 2024")
+                    SimpleDateFormat sdf = new SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.ENGLISH);
+                    Collections.sort(lessonList, (a, b) -> {
+                        try {
+                            Date dateA = sdf.parse(a.getDateEng());
+                            Date dateB = sdf.parse(b.getDateEng());
+                            return dateA.compareTo(dateB);
+                        } catch (ParseException e) {
+                            e.printStackTrace();
+                            return 0; // Treat as equal if parsing fails
+                        }
+                    });
+
+                    // ✅ Save structured lesson list to SharedPreferences
+                    sharedPrefsManager.saveDaysForWeek(year, quarter, weekId, lessonList);
 
                     // ✅ Update RecyclerView
                     lesson_days.clear();
                     lesson_days.addAll(lessonList);
-                    Toast.makeText(MainActivity.this, lesson_days.toString(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Loaded from Firestore", Toast.LENGTH_SHORT).show();
                     lesson_adapter.notifyDataSetChanged();
                 })
                 .addOnFailureListener(e -> Log.e("Firestore", "Failed to fetch days", e));
     }
 
 
-    private void fetchDaysFromSharedPrefs(String year, String quarter, String weekId) {
-        List<LessonModels> lessonList = sharedPrefsManager.getDaysForWeek(year, quarter, weekId);
-
-        if (lessonList != null && !lessonList.isEmpty()) {
-            // ✅ Update RecyclerView
-            lesson_days.clear();
-            lesson_days.addAll(lessonList);
-            Toast.makeText(MainActivity.this, lesson_days.toString(), Toast.LENGTH_SHORT).show();
-            lesson_adapter.notifyDataSetChanged();
-        } else {
-            Log.e("SharedPrefs", "No lessons found for week " + weekId);
-        }
-    }
 
     private void loadSpinnerWithWeeks() {
         List<String> weekTitles = sharedPrefsManager.getWeekTitles(choosenYear, choosenQuarter);
@@ -723,28 +656,6 @@ private void fetchDaysForWeek(String year, String quarter, String selectedWeekId
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, weekTitles);
         QWeeks.setAdapter(adapter);
-    }
-
-    private void populateWeekTitleToIdMap() {
-        weekTitleToIdMap.clear(); // Optional: avoid duplicates if this is called more than once
-
-        Map<String, Object> yearData = sharedPrefsManager.getLessonDataForYear(choosenYear);
-        if (yearData != null) {
-            Map<String, Object> quarterData = (Map<String, Object>) yearData.get(choosenQuarter);
-            if (quarterData != null) {
-                for (Map.Entry<String, Object> entry : quarterData.entrySet()) {
-                    String weekId = entry.getKey();
-                    Object value = entry.getValue();
-                    if (value instanceof Map) {
-                        Map<String, Object> weekData = (Map<String, Object>) value;
-                        String title = (String) weekData.get("title");
-                        if (title != null) {
-                            weekTitleToIdMap.put(title, weekId);
-                        }
-                    }
-                }
-            }
-        }
     }
 
 

@@ -8,7 +8,7 @@
 
     <item android:title="@string/quarterlies">
         <menu>
-            <item android:icon="@drawable/ic_quarterlies" android:id="@+id/quarterlies" android:title="@string/administrator"/>
+            <item android:icon="@drawable/ic_quarterlies" android:id="@+id/quarterlies" android:title="@string/Years"/>
         </menu>
     </item>
 </menu>

@@ -12,9 +12,14 @@ import com.google.firebase.firestore.QuerySnapshot;
 import com.google.gson.Gson;
 import com.sal.leseniyashuleyasabato.utils.SharedPrefsManager;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class LessonRepository {
@@ -131,7 +136,7 @@ public class LessonRepository {
 
         if (!forceOfflineRefresh && sharedPrefsManager.isYearDataAvailable(year)) {
             Log.d("LessonRepository", "Loading data from SharedPreferences for year: " + year);
-            callback.onYearDataLoaded(sharedPrefsManager.getAllLessonData());
+            callback.onYearDataLoaded(sharedPrefsManager.getLessonDataForYear(year)); // ✅ UPDATED
             return;
         }
 
@@ -201,6 +206,19 @@ public class LessonRepository {
                                 daysList.add(day);
                             }
 
+                            // ✅ Sort daysList by dateEng before saving
+                            SimpleDateFormat sdf = new SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.ENGLISH);
+                            Collections.sort(daysList, (d1, d2) -> {
+                                try {
+                                    Date date1 = sdf.parse(d1.getDateEng());
+                                    Date date2 = sdf.parse(d2.getDateEng());
+                                    return date1.compareTo(date2);
+                                } catch (ParseException e) {
+                                    e.printStackTrace();
+                                    return 0;
+                                }
+                            });
+
                             synchronized (weekDataMap) {
                                 weekDataMap.put(weekId, daysList);
                             }
@@ -218,12 +236,10 @@ public class LessonRepository {
                 allTasks.add(processWeeksTask);
             }
 
-            // After all quarters are processed
             Tasks.whenAllComplete(allTasks)
                     .addOnSuccessListener(done -> {
                         Log.d("DEBUG", "All tasks completed successfully for year: " + year);
 
-                        // Save all week titles now
                         for (Map.Entry<String, List<String>> entry : allWeekTitlesByQuarter.entrySet()) {
                             String quarterId = entry.getKey();
                             List<String> titles = entry.getValue();
@@ -231,7 +247,8 @@ public class LessonRepository {
                             Log.d("DEBUG", "Saved week titles for " + quarterId + ": " + titles);
                         }
 
-                        callback.onYearDataLoaded(sharedPrefsManager.getAllLessonData());
+                        sharedPrefsManager.saveYearData(year, allQuarterData);
+                        callback.onYearDataLoaded(sharedPrefsManager.getLessonDataForYear(year)); // ✅ UPDATED
                     })
                     .addOnFailureListener(e -> {
                         Log.e("LessonRepository", "Failed to complete one or more tasks for year: " + year, e);
@@ -245,16 +262,20 @@ public class LessonRepository {
     }
 
 
-
-    // ✅ Fetch Data for a Quarter (Now from SharedPreferences)
     public void fetchQuarterData(String year, String quarter, QuarterDataCallback callback) {
         Map<String, Object> yearData = sharedPrefsManager.getLessonDataForYear(year);
         if (yearData != null && yearData.containsKey(quarter)) {
-            callback.onQuarterDataLoaded((Map<String, Object>) yearData.get(quarter));
+            @SuppressWarnings("unchecked")
+            Map<String, List<LessonModels>> quarterData = (Map<String, List<LessonModels>>) yearData.get(quarter);
+            callback.onQuarterDataLoaded(quarterData);
         } else {
             callback.onQuarterDataLoaded(null);
         }
     }
+
+
+
+
 
     // ✅ Fetch Data for a Week (Now from SharedPreferences)
     public void fetchWeekData(String year, String quarter, String weekId, WeekDataCallback callback) {
@@ -273,8 +294,9 @@ public class LessonRepository {
     }
 
     public interface QuarterDataCallback {
-        void onQuarterDataLoaded(Map<String, Object> quarterData);
+        void onQuarterDataLoaded(Map<String, List<LessonModels>> quarterData);
     }
+
 
     public interface WeekDataCallback {
         void onWeekDataLoaded(List<LessonModels> weekLessons);

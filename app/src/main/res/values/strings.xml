@@ -3,6 +3,7 @@
     <string name="date">Date</string>
     <string name="admin">Admin</string>
     <string name="administrator">Admin</string>
+    <string name="Years">Uchaguzi wa Miaka</string>
     <string name="day_title">Day/title</string>
     <string name="memory_text">Kifungu cha kukariri\n\n  kwamba hatalijenga hekalu, kwa hiyo Sulemani mwanae atalijenga. Daudi aliandaa vifaa vyote vinavyohitajika</string>
     <string name="pick_the_date">Pick The Date</string>
@@ -16,7 +17,7 @@
     <string name="week_summary_content"> hhhh ,l,lll</string>
     <string name="illustration_image">illustration Image</string>
     <string name="select_week">Select Week</string>
-    <string name="quarterlies">quarterlies</string>
+    <string name="quarterlies">Miaka Mingine</string>
 
     <string-array name="quarter">
         <item>Q1</item>

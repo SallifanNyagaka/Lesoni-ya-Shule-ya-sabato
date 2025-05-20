@@ -9,14 +9,15 @@ import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import com.sal.leseniyashuleyasabato.LessonModels;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.lang.reflect.Type;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class SharedPrefsManager {
@@ -57,25 +58,15 @@ public class SharedPrefsManager {
         return new ArrayList<>(); // Return an empty list if no data is found
     }
 
-    public void saveAllLessonData(Map<String, Map<String, List<LessonModels>>> allQuarterData) {
+    public void saveYearData(String year, Map<String, Map<String, List<LessonModels>>> allQuarterData) {
+        Map<String, Map<String, Map<String, List<LessonModels>>>> existingData = getAllLessonData();
+        existingData.put(year, allQuarterData);
+
         SharedPreferences.Editor editor = sharedPreferences.edit();
-
-        for (Map.Entry<String, Map<String, List<LessonModels>>> quarterEntry : allQuarterData.entrySet()) {
-            String quarterId = quarterEntry.getKey();
-            Map<String, List<LessonModels>> weekData = quarterEntry.getValue();
-
-            for (Map.Entry<String, List<LessonModels>> weekEntry : weekData.entrySet()) {
-                String weekId = weekEntry.getKey();
-                List<LessonModels> daysList = weekEntry.getValue();
-
-                String key = quarterId + "_" + weekId;
-                String json = new Gson().toJson(daysList);
-                editor.putString(key, json);
-            }
-        }
-
-        editor.apply(); // Save all at once
+        editor.putString(KEY_LESSON_DATA, gson.toJson(existingData));
+        editor.apply();
     }
+
 
 
     public void saveDaysForWeek(String year, String quarter, String weekId, List<LessonModels> dayList) {
@@ -88,50 +79,85 @@ public class SharedPrefsManager {
     public List<LessonModels> getDaysForWeek(String year, String quarter, String weekId) {
         String key = year + "_" + quarter + "_" + weekId + "_days";
         String daysJson = sharedPreferences.getString(key, null);
-        Log.d("SharedPrefsManager", "Fetching data for year: " + year + ", raw JSON: " + daysJson); // <-- ADD THIS
-
 
         if (daysJson != null && !daysJson.isEmpty()) {
             try {
-                Type type = new TypeToken<ArrayList<LessonModels>>() {}.getType();
-                return gson.fromJson(daysJson, type);
+                Type type = new TypeToken<List<LessonModels>>() {}.getType();
+                List<LessonModels> daysList = gson.fromJson(daysJson, type);
+
+                // ✅ Sort the list by dateEng
+                SimpleDateFormat sdf = new SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.ENGLISH);
+                Collections.sort(daysList, (d1, d2) -> {
+                    try {
+                        Date date1 = sdf.parse(d1.getDateEng());
+                        Date date2 = sdf.parse(d2.getDateEng());
+                        return date1.compareTo(date2);
+                    } catch (ParseException e) {
+                        Log.e("SharedPrefsManager", "Date parse error: " + e.getMessage());
+                        return 0;
+                    }
+                });
+
+                return daysList;
             } catch (JsonSyntaxException e) {
-                Log.e("SharedPrefsManager", "Error parsing JSON for week " + weekId, e);
+                Log.e("SharedPrefsManager", "Error parsing JSON for key: " + key, e);
             }
+        } else {
+            Log.d("SharedPrefsManager", "No data found for key: " + key);
         }
         return null;
     }
 
 
 
-    // ✅ Save Entire Year's Data (Firestore Data -> SharedPreferences)
-    public void saveLessonData(String year, Map<String, Object> lessonData) {
-        Map<String, Object> existingData = getAllLessonData();
-        existingData.put(year, lessonData);  // Store data under the year
-
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString(KEY_LESSON_DATA, gson.toJson(existingData));  // Convert to JSON and store
-        editor.apply();
-    }
 
     // ✅ Retrieve Data for a Specific Year
+    // ✅ Clean and type-safe retrieval of data for a specific year
     public Map<String, Object> getLessonDataForYear(String year) {
-        Map<String, Object> allData = getAllLessonData();
-        if (allData.containsKey(year)) {
-            return (Map<String, Object>) allData.get(year);
+        Map<String, ?> allPrefs = sharedPreferences.getAll();
+        Map<String, Map<String, List<LessonModels>>> yearData = new HashMap<>();
+
+        for (Map.Entry<String, ?> entry : allPrefs.entrySet()) {
+            String key = entry.getKey();
+
+            if (key.startsWith(year + "_") && key.endsWith("_days")) {
+                String[] parts = key.split("_");
+                if (parts.length >= 3) {
+                    String quarter = parts[1];
+                    String weekId = parts[2];
+
+                    List<LessonModels> lessons = getDaysForWeek(year, quarter, weekId);
+                    if (lessons != null && !lessons.isEmpty()) {
+                        Map<String, List<LessonModels>> quarterMap = yearData.getOrDefault(quarter, new HashMap<>());
+                        quarterMap.put(weekId, lessons);
+                        yearData.put(quarter, quarterMap);
+                    }
+                }
+            }
         }
-        return null;
+
+        // Convert to Map<String, Object> before returning
+        Map<String, Object> safeCastMap = new HashMap<>();
+        for (Map.Entry<String, Map<String, List<LessonModels>>> entry : yearData.entrySet()) {
+            safeCastMap.put(entry.getKey(), entry.getValue());
+        }
+
+        return safeCastMap.isEmpty() ? null : safeCastMap;
     }
 
+
+
+
+
     // ✅ Get All Stored Data (All Years)
-    public Map<String, Object> getAllLessonData() {
-        String jsonData = sharedPreferences.getString(KEY_LESSON_DATA, null);
-        if (jsonData == null) {
-            return new HashMap<>();  // Return empty if no data exists
-        }
-        Type type = new TypeToken<Map<String, Object>>() {}.getType();
-        return gson.fromJson(jsonData, type);
+    public Map<String, Map<String, Map<String, List<LessonModels>>>> getAllLessonData() {
+        String json = sharedPreferences.getString(KEY_LESSON_DATA, null);
+        if (json == null) return new HashMap<>();
+
+        Type type = new TypeToken<Map<String, Map<String, Map<String, List<LessonModels>>>>>() {}.getType();
+        return gson.fromJson(json, type);
     }
+
 
     // ✅ Check if Data Exists for a Year
     public boolean isYearDataAvailable(String year) {
@@ -141,48 +167,6 @@ public class SharedPrefsManager {
     public boolean isWeekDataAvailable(String year, String quarterId, String weekId) {
         String key = year + "_" + quarterId + "_" + weekId;
         return sharedPreferences.contains(key);
-    }
-
-    public List<String> getWeekTitlesForQuarter(String year, String quarter) {
-        Map<String, Object> allData = getAllLessonData();
-
-        if (!allData.containsKey(year)) {
-            Log.d("DEBUG", "No data found for year: " + year);
-            return new ArrayList<>();
-        }
-
-        Object yearObj = allData.get(year);
-        if (!(yearObj instanceof Map)) {
-            Log.e("DEBUG", "Year data is not a Map");
-            return new ArrayList<>();
-        }
-
-        Map<String, Object> yearData = (Map<String, Object>) yearObj;
-
-        if (!yearData.containsKey(quarter)) {
-            Log.d("DEBUG", "No quarter data found for quarter: " + quarter);
-            return new ArrayList<>();
-        }
-
-        Object quarterObj = yearData.get(quarter);
-        if (!(quarterObj instanceof Map)) {
-            Log.e("DEBUG", "Quarter data is not a Map");
-            return new ArrayList<>();
-        }
-
-        Map<String, Object> quarterData = (Map<String, Object>) quarterObj;
-
-        List<String> weekTitles = new ArrayList<>();
-        for (Map.Entry<String, Object> weekEntry : quarterData.entrySet()) {
-            Object weekVal = weekEntry.getValue();
-            if (weekVal instanceof Map) {
-                Map<String, Object> weekMap = (Map<String, Object>) weekVal;
-                String title = (String) weekMap.getOrDefault("weekTitle", "Week " + weekEntry.getKey());
-                weekTitles.add(title);
-            }
-        }
-
-        return weekTitles;
     }
 
 
