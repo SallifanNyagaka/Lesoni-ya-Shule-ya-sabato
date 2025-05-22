@@ -78,6 +78,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Calendar;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import android.app.AlertDialog;
 import android.view.LayoutInflater;
@@ -143,6 +144,10 @@ public class MainActivity extends AppCompatActivity
     private SharedPrefsManager sharedPrefsManager;
 
     private Map<String, String> weekTitleToIdMap = new HashMap<>();
+    private String todayEngDate = new SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.ENGLISH).format(new Date());
+    int scrollToIndexAfterLoad = -1;
+    private boolean isInitialSpinnerLoad = true;
+
 
 
     /* JADX INFO: Access modifiers changed from: protected */
@@ -189,6 +194,7 @@ public class MainActivity extends AppCompatActivity
 // Debugging
         Log.d("IntentDebug", "QUARTER: " + choosenQuarter);
         Log.d("IntentDebug", "YEAR: " + choosenYear);
+        Log.d("IntentDebug", "Today's Date: " + todayEngDate);
 
 
         Toast.makeText(this, "Quarter: " + choosenQuarter + " Year: " + choosenYear, Toast.LENGTH_SHORT).show();
@@ -374,23 +380,32 @@ public class MainActivity extends AppCompatActivity
                 QWeeks.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                     @Override
                     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                        if (isInitialSpinnerLoad) {
+                            isInitialSpinnerLoad = false;
+
+                            String todayEngDate = new SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.ENGLISH).format(new Date());
+                            String todayWeekId = findWeekIdForToday(choosenYear, choosenQuarter, todayEngDate);
+
+                            if (todayWeekId != null) {
+                                Log.d("AutoWeek", "Scrolling to today's week: " + todayWeekId);
+                                fetchDaysForWeek(choosenYear, choosenQuarter, todayWeekId);
+                                setSpinnerToWeekId(todayWeekId);
+                                return; // Don't continue with manual WK-x logic
+                            }
+                        }
+
+                        // Manual selection fallback
                         String selectedWeekTitle = parent.getItemAtPosition(position).toString();
-
-                        // Assuming first spinner item is week 1 → "WK-1"
-                        String selectedWeekId = "WK-" + (position + 1);
-
-                        Log.d("Spinner", "Selected title: " + selectedWeekTitle + ", Derived ID: " + selectedWeekId);
-
                         if (!selectedWeekTitle.equals("No data available")) {
+                            String selectedWeekId = "WK-" + (position + 1);
                             fetchDaysForWeek(choosenYear, choosenQuarter, selectedWeekId);
                         }
                     }
 
                     @Override
-                    public void onNothingSelected(AdapterView<?> parent) {
-                        // Optional: handle when nothing is selected
-                    }
+                    public void onNothingSelected(AdapterView<?> parent) {}
                 });
+
 
                 printLessonDataForYear(choosenYear);
                 Log.d("DEBUG", "Week Titles Saved: " + new Gson().toJson(sharedPrefsManager.getWeekTitles(choosenYear, choosenQuarter)));
@@ -505,17 +520,19 @@ btnOpenFragment.setOnClickListener(new View.OnClickListener() {
         }
     }
 
-//new changes
-private void fetchDaysForWeek(String year, String quarter, String selectedWeekId) {
-    Log.d("FetchDays", "Fetching days for Year: " + year + ", Quarter: " + quarter + ", WeekID: " + selectedWeekId);
+    private void setSpinnerToWeekId(String weekId) {
+        List<String> weekTitles = sharedPrefsManager.getWeekTitles(choosenYear, choosenQuarter);
+        int index = Integer.parseInt(weekId.replace("WK-", "")) - 1;
+        if (index >= 0 && index < weekTitles.size()) {
+            QWeeks.setSelection(index);
+        }
+    }
 
-    if (isNetworkAvailable(MainActivity.this)) {
-        Log.d("FetchDays", "✅ Network available, fetching from Firestore.");
-        fetchDaysFromFirestore(year, quarter, selectedWeekId); // This updates SharedPrefs as well
-    } else {
-        Log.d("FetchDays", "❌ Network unavailable, trying SharedPreferences.");
+    //new changes
+    private void fetchDaysForWeek(String year, String quarter, String selectedWeekId) {
+        Log.d("FetchDays", "Fetching days for Year: " + year + ", Quarter: " + quarter + ", WeekID: " + selectedWeekId);
 
-        // 🔁 Get updated structure from SharedPreferences
+        // ✅ Step 1: Always read from SharedPreferences first
         Map<String, Object> yearData = sharedPrefsManager.getLessonDataForYear(year);
         if (yearData == null || yearData.isEmpty()) {
             Log.e("FetchDays", "⚠️ Year data not found or empty in SharedPreferences for year: " + year);
@@ -535,18 +552,61 @@ private void fetchDaysForWeek(String year, String quarter, String selectedWeekId
             return;
         }
 
-        // ✅ Use local data
+        // ✅ Load from SharedPreferences
         List<LessonModels> lessons = quarterData.get(selectedWeekId);
         if (lessons != null && !lessons.isEmpty()) {
             lesson_days.clear();
             lesson_days.addAll(lessons);
             lesson_adapter.notifyDataSetChanged();
             Toast.makeText(MainActivity.this, "📦 Loaded from SharedPrefs", Toast.LENGTH_SHORT).show();
+
+            // ✅ Scroll to today's lesson if available
+            String todayFormatted = new SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.ENGLISH).format(new Date());
+            int scrollToIndexAfterLoad = IntStream.range(0, lesson_days.size())
+                    .filter(i -> todayFormatted.equals(lesson_days.get(i).getDateEng()))
+                    .findFirst().orElse(-1);
+
+            if (scrollToIndexAfterLoad != -1) {
+                day.post(() -> day.scrollToPosition(scrollToIndexAfterLoad));
+            }
         } else {
             Log.e("FetchDays", "⚠️ No lessons found for week ID: " + selectedWeekId);
         }
+
+        // 🔄 Step 2: If online, update the SharedPreferences in the background
+        if (isNetworkAvailable(MainActivity.this)) {
+            Log.d("FetchDays", "🌐 Network available — refreshing in background from Firestore.");
+            new Thread(() -> fetchDaysFromFirestore(year, quarter, selectedWeekId)).start();
+        } else {
+            Log.d("FetchDays", "📴 Offline — skipping background Firestore refresh.");
+        }
     }
-}
+
+
+
+    private String findWeekIdForToday(String year, String quarter, String todayEngDate) {
+        Map<String, Object> yearData = sharedPrefsManager.getLessonDataForYear(year);
+        if (yearData == null) return null;
+
+        Map<String, List<LessonModels>> quarterData = (Map<String, List<LessonModels>>) yearData.get(quarter);
+        if (quarterData == null) return null;
+
+        for (Map.Entry<String, List<LessonModels>> entry : quarterData.entrySet()) {
+            String weekId = entry.getKey();
+            List<LessonModels> lessons = entry.getValue();
+
+            for (int i = 0; i < lessons.size(); i++) {
+                LessonModels lesson = lessons.get(i);
+                if (todayEngDate.equals(lesson.getDateEng())) {
+                    // Store index in a variable for scrolling later
+                    scrollToIndexAfterLoad = i; // make this a global variable
+                    return weekId;
+                }
+            }
+        }
+
+        return null; // Not found
+    }
 
 
 
@@ -639,7 +699,7 @@ private void fetchDaysForWeek(String year, String quarter, String selectedWeekId
                     // ✅ Update RecyclerView
                     lesson_days.clear();
                     lesson_days.addAll(lessonList);
-                    Toast.makeText(MainActivity.this, "Loaded from Firestore", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Updating Cache from Firestore", Toast.LENGTH_SHORT).show();
                     lesson_adapter.notifyDataSetChanged();
                 })
                 .addOnFailureListener(e -> Log.e("Firestore", "Failed to fetch days", e));
@@ -657,24 +717,6 @@ private void fetchDaysForWeek(String year, String quarter, String selectedWeekId
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, weekTitles);
         QWeeks.setAdapter(adapter);
     }
-
-
-
-
-
-
-    /*private void loadSpinnerWithWeeks() {
-        Log.d("DEBUG", "All SharedPrefs Data: " + new Gson().toJson(sharedPrefsManager.getAllLessonData()));
-        List<String> weekTitles = sharedPrefsManager.getWeekTitlesForQuarter(choosenYear, choosenQuarter);
-        Log.d("loadSpinnerWithWeeks", "Week titles: " + weekTitles.toString());
-
-        if (weekTitles.isEmpty()) {
-            weekTitles.add("No data available");
-        }
-
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, weekTitles);
-        QWeeks.setAdapter(adapter);
-    }*/
 
 
 

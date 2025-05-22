@@ -131,10 +131,10 @@ public class LessonRepository {
 
     }*/
 
-    public void fetchYearData(String year, boolean forceOfflineRefresh, YearDataCallback callback) {
-        Log.d("DEBUG", "fetchYearData called for year: " + year + ", forceOfflineRefresh: " + forceOfflineRefresh);
+    public void fetchYearData(String year, boolean refreshCacheFromFirestore, YearDataCallback callback) {
+        Log.d("DEBUG", "fetchYearData called for year: " + year + ", forceOfflineRefresh: " + refreshCacheFromFirestore);
 
-        if (!forceOfflineRefresh && sharedPrefsManager.isYearDataAvailable(year)) {
+        if (!refreshCacheFromFirestore && sharedPrefsManager.isYearDataAvailable(year)) {
             Log.d("LessonRepository", "Loading data from SharedPreferences for year: " + year);
             callback.onYearDataLoaded(sharedPrefsManager.getLessonDataForYear(year)); // ✅ UPDATED
             return;
