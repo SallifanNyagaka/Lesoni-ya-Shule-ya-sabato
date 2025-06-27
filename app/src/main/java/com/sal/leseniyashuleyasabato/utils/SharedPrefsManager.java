@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -34,14 +35,13 @@ public class SharedPrefsManager {
 
     // SAVE properly
 
-    public void saveWeekTitles(String year, String quarter, List<String> weekTitles) {
+    public void saveWeekTitles(String year, String quarter, Map<String, String> weekTitlesWithRanges) {
         String key = year + "_" + quarter + "_week_titles";
-        String json = gson.toJson(weekTitles); // Serialize the list of titles
-        Log.d("SharedPrefsManager", "Saving week titles with key: " + key + ", JSON: " + json);
+        String json = gson.toJson(weekTitlesWithRanges); // Serialize the map
+        Log.d("SharedPrefsManager", "Saving week titles with ranges with key: " + key + ", JSON: " + json);
         sharedPreferences.edit().putString(key, json).apply();
     }
-
-    public List<String> getWeekTitles(String year, String quarter) {
+    public Map<String, String> getWeekTitles(String year, String quarter) {
         String key = year + "_" + quarter + "_week_titles";
         Log.d("SharedPrefsManager", "Retrieve Key: " + key);
         String weekTitlesJson = sharedPreferences.getString(key, null);
@@ -49,14 +49,15 @@ public class SharedPrefsManager {
 
         if (weekTitlesJson != null && !weekTitlesJson.isEmpty()) {
             try {
-                Type type = new TypeToken<ArrayList<String>>() {}.getType();
-                return gson.fromJson(weekTitlesJson, type); // Deserialize the JSON into a List
+                Type type = new TypeToken<LinkedHashMap<String, String>>() {}.getType(); // maintain order
+                return gson.fromJson(weekTitlesJson, type);
             } catch (JsonSyntaxException e) {
-                Log.e("SharedPrefsManager", "Error parsing JSON for week titles", e);
+                Log.e("SharedPrefsManager", "Error parsing JSON for week titles with ranges", e);
             }
         }
-        return new ArrayList<>(); // Return an empty list if no data is found
+        return new LinkedHashMap<>(); // Return an empty map if nothing found
     }
+
 
     public void saveYearData(String year, Map<String, Map<String, List<LessonModels>>> allQuarterData) {
         Map<String, Map<String, Map<String, List<LessonModels>>>> existingData = getAllLessonData();

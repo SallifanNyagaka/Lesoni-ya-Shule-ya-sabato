@@ -25,19 +25,19 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.Source;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.ArrayList;
 import java.util.Map;
@@ -147,7 +147,10 @@ public class MainActivity extends AppCompatActivity
     private String todayEngDate = new SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.ENGLISH).format(new Date());
     int scrollToIndexAfterLoad = -1;
     private boolean isInitialSpinnerLoad = true;
+    private boolean isFirstLaunch = true;
 
+    public String todayWeekId;
+    ProgressBar dataProgressBar;
 
 
     /* JADX INFO: Access modifiers changed from: protected */
@@ -156,6 +159,7 @@ public class MainActivity extends AppCompatActivity
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // Get the SharedPreferences to check registration status
+        dataProgressBar = findViewById(R.id.dataProgressBar);
         SharedPreferences prefs = getSharedPreferences("MyAppPrefs", MODE_PRIVATE);
         boolean isRegistered = prefs.getBoolean("isRegistered", false);
         boolean isLoggedIn = prefs.getBoolean("isLogged", true);
@@ -367,15 +371,22 @@ public class MainActivity extends AppCompatActivity
                 lessonRepository = new LessonRepository(this);
                 sharedPrefsManager = new SharedPrefsManager(this);
 
+// ✅ Show progress bar before loading starts
+                //dataProgressBar.setVisibility(View.VISIBLE);
+
                 lessonRepository.fetchYearData(choosenYear, isOnline, yearData -> {
                     Log.d("DEBUG", "fetchYearData completed. Waiting before loading spinner...");
 
-                    // Add a delay to allow all asynchronous tasks to complete before loading spinner
                     new Handler(Looper.getMainLooper()).postDelayed(() -> {
                         Log.d("DEBUG", "Loading spinner with fresh data from SharedPrefs...");
-                        loadSpinnerWithWeeks(); // Now SharedPrefs has fresh data
-                    }, 1000); // Wait 1 seconds (1000 ms) before loading spinner
+
+                        // ✅ Hide the progress bar after data is fetched and delay passed
+                        //dataProgressBar.setVisibility(View.GONE);
+
+                        loadSpinnerWithWeeks(); // Load weeks now
+                    }, 1000); // 1 second delay
                 });
+
 
                 QWeeks.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                     @Override
@@ -384,7 +395,7 @@ public class MainActivity extends AppCompatActivity
                             isInitialSpinnerLoad = false;
 
                             String todayEngDate = new SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.ENGLISH).format(new Date());
-                            String todayWeekId = findWeekIdForToday(choosenYear, choosenQuarter, todayEngDate);
+                            todayWeekId = findWeekIdForToday(choosenYear, choosenQuarter, todayEngDate);
 
                             if (todayWeekId != null) {
                                 Log.d("AutoWeek", "Scrolling to today's week: " + todayWeekId);
@@ -521,66 +532,64 @@ btnOpenFragment.setOnClickListener(new View.OnClickListener() {
     }
 
     private void setSpinnerToWeekId(String weekId) {
-        List<String> weekTitles = sharedPrefsManager.getWeekTitles(choosenYear, choosenQuarter);
+        // Extract the index from weekId (e.g., WK-3 → 3 → index 2)
         int index = Integer.parseInt(weekId.replace("WK-", "")) - 1;
-        if (index >= 0 && index < weekTitles.size()) {
+
+        // Ensure index is within bounds of the spinner adapter
+        if (QWeeks.getAdapter() != null && index >= 0 && index < QWeeks.getAdapter().getCount()) {
             QWeeks.setSelection(index);
+        } else {
+            Log.w("Spinner", "Invalid index for weekId: " + weekId + " — Spinner count: " + QWeeks.getAdapter().getCount());
         }
     }
 
+
     //new changes
     private void fetchDaysForWeek(String year, String quarter, String selectedWeekId) {
-        Log.d("FetchDays", "Fetching days for Year: " + year + ", Quarter: " + quarter + ", WeekID: " + selectedWeekId);
+        Log.d("FetchDays", "🚀 Fast load for Year: " + year + ", Quarter: " + quarter + ", WeekID: " + selectedWeekId);
 
-        // ✅ Step 1: Always read from SharedPreferences first
+        // ✅ Load SharedPrefs data immediately
         Map<String, Object> yearData = sharedPrefsManager.getLessonDataForYear(year);
-        if (yearData == null || yearData.isEmpty()) {
-            Log.e("FetchDays", "⚠️ Year data not found or empty in SharedPreferences for year: " + year);
+        if (yearData == null) {
+            Log.e("FetchDays", "⚠️ No year data in cache");
             return;
         }
 
         Map<String, List<LessonModels>> quarterData = (Map<String, List<LessonModels>>) yearData.get(quarter);
-        if (quarterData == null || quarterData.isEmpty()) {
-            Log.e("FetchDays", "⚠️ Quarter data not found or empty in SharedPreferences for quarter: " + quarter);
+        if (quarterData == null) {
+            Log.e("FetchDays", "⚠️ No quarter data in cache");
             return;
         }
 
-        Log.d("FetchDays", "📌 Available week keys in SharedPrefs: " + quarterData.keySet());
-
-        if (!quarterData.containsKey(selectedWeekId)) {
-            Log.e("FetchDays", "🚫 Week ID '" + selectedWeekId + "' not found in quarter data.");
-            return;
-        }
-
-        // ✅ Load from SharedPreferences
         List<LessonModels> lessons = quarterData.get(selectedWeekId);
-        if (lessons != null && !lessons.isEmpty()) {
-            lesson_days.clear();
-            lesson_days.addAll(lessons);
-            lesson_adapter.notifyDataSetChanged();
-            Toast.makeText(MainActivity.this, "📦 Loaded from SharedPrefs", Toast.LENGTH_SHORT).show();
-
-            // ✅ Scroll to today's lesson if available
-            String todayFormatted = new SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.ENGLISH).format(new Date());
-            int scrollToIndexAfterLoad = IntStream.range(0, lesson_days.size())
-                    .filter(i -> todayFormatted.equals(lesson_days.get(i).getDateEng()))
-                    .findFirst().orElse(-1);
-
-            if (scrollToIndexAfterLoad != -1) {
-                day.post(() -> day.scrollToPosition(scrollToIndexAfterLoad));
-            }
-        } else {
-            Log.e("FetchDays", "⚠️ No lessons found for week ID: " + selectedWeekId);
+        if (lessons == null || lessons.isEmpty()) {
+            Log.e("FetchDays", "⚠️ No lesson data for week: " + selectedWeekId);
+            return;
         }
 
-        // 🔄 Step 2: If online, update the SharedPreferences in the background
-        if (isNetworkAvailable(MainActivity.this)) {
-            Log.d("FetchDays", "🌐 Network available — refreshing in background from Firestore.");
-            new Thread(() -> fetchDaysFromFirestore(year, quarter, selectedWeekId)).start();
-        } else {
-            Log.d("FetchDays", "📴 Offline — skipping background Firestore refresh.");
+        // ✅ Lightning-fast local display
+        lesson_days.clear();
+        lesson_days.addAll(lessons);
+        lesson_adapter.notifyDataSetChanged();
+
+        Toast.makeText(this, "📦 Loaded from cache", Toast.LENGTH_SHORT).show();
+
+        // 🔄 Scroll to today
+        String todayFormatted = new SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.ENGLISH).format(new Date());
+        int index = IntStream.range(0, lessons.size())
+                .filter(i -> todayFormatted.equals(lessons.get(i).getDateEng()))
+                .findFirst().orElse(-1);
+
+        if (index != -1) {
+            day.post(() -> day.scrollToPosition(index));
+        }
+
+        // 🌐 Background refresh (cache only, no UI change)
+        if (isNetworkAvailable(this)) {
+            Log.d("FetchDays", "🌍 Updating cache in background from Firestore...");
         }
     }
+
 
 
 
@@ -652,70 +661,82 @@ btnOpenFragment.setOnClickListener(new View.OnClickListener() {
     }
 
 
-
-
-
-    private void fetchDaysFromFirestore(String year, String quarter, String weekId) {
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-
-        db.collection("quarters_" + year)
-                .document(quarter)
-                .collection("weeks")
-                .document(weekId)
-                .collection("days")
-                .get()
-                .addOnSuccessListener(snapshot -> {
-                    List<LessonModels> lessonList = new ArrayList<>();
-
-                    for (QueryDocumentSnapshot doc : snapshot) {
-                        lessonList.add(new LessonModels(
-                                doc.getString("date"),
-                                doc.getString("dateEng"),
-                                doc.getString("weekDateRange"),
-                                R.drawable.share_today,
-                                doc.getString("title"),
-                                doc.getString("content"),
-                                doc.getString("question"),
-                                doc.getString("image_url")
-                        ));
-                    }
-
-                    // ✅ Sort list by English date (e.g., "Thursday, October 3, 2024")
-                    SimpleDateFormat sdf = new SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.ENGLISH);
-                    Collections.sort(lessonList, (a, b) -> {
-                        try {
-                            Date dateA = sdf.parse(a.getDateEng());
-                            Date dateB = sdf.parse(b.getDateEng());
-                            return dateA.compareTo(dateB);
-                        } catch (ParseException e) {
-                            e.printStackTrace();
-                            return 0; // Treat as equal if parsing fails
-                        }
-                    });
-
-                    // ✅ Save structured lesson list to SharedPreferences
-                    sharedPrefsManager.saveDaysForWeek(year, quarter, weekId, lessonList);
-
-                    // ✅ Update RecyclerView
-                    lesson_days.clear();
-                    lesson_days.addAll(lessonList);
-                    Toast.makeText(MainActivity.this, "Updating Cache from Firestore", Toast.LENGTH_SHORT).show();
-                    lesson_adapter.notifyDataSetChanged();
-                })
-                .addOnFailureListener(e -> Log.e("Firestore", "Failed to fetch days", e));
-    }
-
-
-
     private void loadSpinnerWithWeeks() {
-        List<String> weekTitles = sharedPrefsManager.getWeekTitles(choosenYear, choosenQuarter);
+        Map<String, String> weekTitleToDateRangeMap = sharedPrefsManager.getWeekTitles(choosenYear, choosenQuarter);
 
-        if (weekTitles.isEmpty()) {
-            weekTitles.add("No data available");
+        // Map to hold title → date
+        List<Map.Entry<String, String>> entries = new ArrayList<>(weekTitleToDateRangeMap.entrySet());
+
+        // Swahili to English month mapping
+        Map<String, String> swahiliToEnglishMonths = new HashMap<>();
+        swahiliToEnglishMonths.put("Januari", "January");
+        swahiliToEnglishMonths.put("Februari", "February");
+        swahiliToEnglishMonths.put("Machi", "March");
+        swahiliToEnglishMonths.put("Aprili", "April");
+        swahiliToEnglishMonths.put("Mei", "May");
+        swahiliToEnglishMonths.put("Juni", "June");
+        swahiliToEnglishMonths.put("Julai", "July");
+        swahiliToEnglishMonths.put("Agosti", "August");
+        swahiliToEnglishMonths.put("Septemba", "September");
+        swahiliToEnglishMonths.put("Oktoba", "October");
+        swahiliToEnglishMonths.put("Novemba", "November");
+        swahiliToEnglishMonths.put("Desemba", "December");
+
+        SimpleDateFormat formatter = new SimpleDateFormat("MMMM d, yyyy", Locale.ENGLISH);
+
+        // Sort entries by parsed start date
+        entries.sort((e1, e2) -> {
+            try {
+                String range1 = e1.getValue();
+                String range2 = e2.getValue();
+
+                Date date1 = parseSwahiliStartDate(range1, swahiliToEnglishMonths);
+                Date date2 = parseSwahiliStartDate(range2, swahiliToEnglishMonths);
+
+                return date1.compareTo(date2);
+            } catch (Exception e) {
+                return 0;
+            }
+        });
+
+        List<String> displayTitles = new ArrayList<>();
+        Map<String, String> sortedTitleToDateRangeMap = new LinkedHashMap<>();
+
+        int index = 1;
+        for (Map.Entry<String, String> entry : entries) {
+            String title = entry.getKey();
+            String dateRange = entry.getValue();
+
+            String displayText = "WK_" + index + ": " + title + " -> " + dateRange;
+            displayTitles.add(displayText);
+
+            sortedTitleToDateRangeMap.put(title, dateRange); // In case needed later
+            index++;
         }
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, weekTitles);
+        if (displayTitles.isEmpty()) {
+            displayTitles.add("No data available");
+        }
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, displayTitles);
         QWeeks.setAdapter(adapter);
+    }
+
+    // Helper to parse swahili range like "Juni 21 - 27 ,2025" or "Juni 28 - Julai 4"
+    private Date parseSwahiliStartDate(String range, Map<String, String> monthMap) throws ParseException {
+        String startPart = range.split("-")[0].trim(); // "Juni 21"
+        String month = startPart.split(" ")[0];        // "Juni"
+        String day = startPart.split(" ")[1];          // "21"
+
+        String englishMonth = monthMap.getOrDefault(month, month);
+        String currentYear = String.valueOf(Calendar.getInstance().get(Calendar.YEAR)); // fallback
+
+        if (range.contains(",")) {
+            currentYear = range.split(",")[1].trim(); // "2025"
+        }
+
+        String finalDate = englishMonth + " " + day + ", " + currentYear;
+        return new SimpleDateFormat("MMMM d, yyyy", Locale.ENGLISH).parse(finalDate);
     }
 
 
@@ -785,6 +806,17 @@ btnOpenFragment.setOnClickListener(new View.OnClickListener() {
               // android.app.Activity
     public void onStart() {
         super.onStart();
+
+        super.onStart();
+
+        if (isFirstLaunch) {
+            // ✅ Only refresh once, after a true cold start
+            fetchDaysForWeek(choosenYear, choosenQuarter, todayWeekId);
+            isFirstLaunch = false;
+        } else {
+            Log.d("MainActivity", "🔄 App resumed from background — no refresh");
+        }
+
         this.weekT.addSnapshotListener(
                 this,
                 new EventListener<
@@ -847,6 +879,7 @@ btnOpenFragment.setOnClickListener(new View.OnClickListener() {
         }
 
         super.onDestroy();
+        isFirstLaunch = true;
     }
 
     public String Quarter() {

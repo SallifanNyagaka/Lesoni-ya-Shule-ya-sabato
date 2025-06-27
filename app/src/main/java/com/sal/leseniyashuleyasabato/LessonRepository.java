@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -145,7 +146,7 @@ public class LessonRepository {
         Log.d("DEBUG", "Firestore reference initialized for year: " + year);
 
         Map<String, Map<String, List<LessonModels>>> allQuarterData = new HashMap<>();
-        Map<String, List<String>> allWeekTitlesByQuarter = new HashMap<>();
+        Map<String, Map<String, String>> allWeekTitlesByQuarter = new HashMap<>(); // ✅ updated type
 
         yearRef.get().addOnSuccessListener(quarterSnapshots -> {
             Log.d("DEBUG", "Successfully fetched data for year: " + year + ". Processing quarters...");
@@ -159,7 +160,7 @@ public class LessonRepository {
                 Map<String, List<LessonModels>> weekDataMap = new HashMap<>();
                 allQuarterData.put(quarterId, weekDataMap);
 
-                List<String> weekTitlesForThisQuarter = new ArrayList<>();
+                Map<String, String> weekTitlesForThisQuarter = new LinkedHashMap<>(); // ✅ map of weekTitle → weekDateRange
                 allWeekTitlesByQuarter.put(quarterId, weekTitlesForThisQuarter);
 
                 Task<QuerySnapshot> weeksTask = weeksRef.get();
@@ -176,11 +177,13 @@ public class LessonRepository {
                         Log.d("DEBUG", "Processing week: " + weekId);
 
                         String weekTitle = weekDoc.getString("week_Title");
-                        if (weekTitle != null) {
-                            weekTitlesForThisQuarter.add(weekTitle);
-                            Log.d("DEBUG", "Adding Week Title (" + quarterId + "): " + weekTitle);
+                        String weekDateRange = weekDoc.getString("weekDateRange");
+
+                        if (weekTitle != null && weekDateRange != null) {
+                            weekTitlesForThisQuarter.put(weekTitle, weekDateRange); // ✅ store both
+                            Log.d("DEBUG", "Adding Week Title (" + quarterId + "): " + weekTitle + " → " + weekDateRange);
                         } else {
-                            Log.w("DEBUG", "Week Title is null for week: " + weekId);
+                            Log.w("DEBUG", "Week title or range is null for week: " + weekId);
                         }
 
                         Task<QuerySnapshot> daysTask = weekDoc.getReference().collection("days").get();
@@ -240,11 +243,11 @@ public class LessonRepository {
                     .addOnSuccessListener(done -> {
                         Log.d("DEBUG", "All tasks completed successfully for year: " + year);
 
-                        for (Map.Entry<String, List<String>> entry : allWeekTitlesByQuarter.entrySet()) {
+                        for (Map.Entry<String, Map<String, String>> entry : allWeekTitlesByQuarter.entrySet()) {
                             String quarterId = entry.getKey();
-                            List<String> titles = entry.getValue();
-                            sharedPrefsManager.saveWeekTitles(year, quarterId, titles);
-                            Log.d("DEBUG", "Saved week titles for " + quarterId + ": " + titles);
+                            Map<String, String> titleRangeMap = entry.getValue();
+                            sharedPrefsManager.saveWeekTitles(year, quarterId, titleRangeMap); // ✅ update this method in SharedPrefsManager
+                            Log.d("DEBUG", "Saved week titles + ranges for " + quarterId + ": " + titleRangeMap);
                         }
 
                         sharedPrefsManager.saveYearData(year, allQuarterData);
@@ -260,6 +263,7 @@ public class LessonRepository {
             callback.onYearDataLoaded(null);
         });
     }
+
 
 
     public void fetchQuarterData(String year, String quarter, QuarterDataCallback callback) {
