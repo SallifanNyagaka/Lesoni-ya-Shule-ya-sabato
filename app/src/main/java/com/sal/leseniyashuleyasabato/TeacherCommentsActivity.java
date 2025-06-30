@@ -45,6 +45,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import android.util.Log;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -54,6 +55,8 @@ public class TeacherCommentsActivity extends AppCompatActivity {
     private LinearLayout commentsContainer;
     private String path = "quarters_2024/Q4/weeks";
     private Integer wk_comment = 1;
+
+    Integer position;
 
 
 
@@ -353,6 +356,7 @@ public class TeacherCommentsActivity extends AppCompatActivity {
         Integer verse = 1;
         Integer to = 1;
 
+
         // Remove duplicated book names
         Pattern duplicatePattern = Pattern.compile("^(\\w+)(\\s\\1)+");
         Matcher duplicateMatcher = duplicatePattern.matcher(compVerse);
@@ -385,7 +389,8 @@ public class TeacherCommentsActivity extends AppCompatActivity {
                 Matcher matcher = pattern.matcher(segment.trim());
 
                 if (matcher.find()) {
-                    String currentBook = matcher.group(1).toLowerCase().trim();
+                    String currentBookWithoutCase = Objects.requireNonNull(matcher.group(1)).trim();
+                    String currentBook = Objects.requireNonNull(matcher.group(1)).toLowerCase().trim();
                     Integer currentChapter =
                             matcher.group(3) != null
                                     ? Integer.parseInt(matcher.group(3).trim())
@@ -434,6 +439,7 @@ public class TeacherCommentsActivity extends AppCompatActivity {
 
                     // Update the book if it's still the default
                     if (book.equals("books/mwanzo.txt") && !currentBook.isEmpty()) {
+                        position = findStringInArray(new BibleStuff().books, currentBookWithoutCase);
                         book = "books/" + currentBook + ".txt";
                     }
 
@@ -453,7 +459,10 @@ public class TeacherCommentsActivity extends AppCompatActivity {
                                             + "\nVerse: "
                                             + verse
                                             + "\nTo: "
-                                            + to,
+                                            + to
+                                            + "\nPosition: "
+                                            +position,
+
                                     Toast.LENGTH_LONG)
                             .show();
 
@@ -461,30 +470,27 @@ public class TeacherCommentsActivity extends AppCompatActivity {
                     // You can add your logic here to process each chapter and verse
                 } else {
                     // Handle the case where the format does not match
-                    Toast.makeText(
-                                    TeacherCommentsActivity.this,
-                                    "Error parsing verse: " + segment,
-                                    Toast.LENGTH_SHORT)
+                    Toast.makeText(TeacherCommentsActivity.this, "Error parsing verse: " + segment, Toast.LENGTH_SHORT)
                             .show();
                 }
             }
         } catch (Exception e) {
-            Toast.makeText(
-                            TeacherCommentsActivity.this,
-                            "Error parsing verse: " + compVerse,
-                            Toast.LENGTH_LONG)
-                    .show();
+            Toast.makeText(TeacherCommentsActivity.this, "Error parsing verse: " + compVerse, Toast.LENGTH_LONG).show();
         }
 
         // Start the Bible_Read activity with the extracted information
         Intent bible = new Intent(TeacherCommentsActivity.this, Bible_Read.class);
+        bible.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         ArrayList<Integer> StartStop = bible_Chapters(book, chapter);
         bible.putExtra("chapter", book + " " + chapter);
         bible.putExtra("startVerse", StartStop.get(0));
         bible.putExtra("stopVerse", StartStop.get(1));
+        bible.putExtra("verse", verse);
+        bible.putExtra("to", to);
         bible.putExtra("bookName", book);
-        bible.putExtra("", findStringInArray(new BibleStuff().books, book));
-        startActivity(bible);
+        bible.putExtra("bookPosition", position);
+        bible.putExtra("Chapters", chapter);
+        TeacherCommentsActivity.this.startActivity(bible);
     }
 
     private void cannotOpen() {
