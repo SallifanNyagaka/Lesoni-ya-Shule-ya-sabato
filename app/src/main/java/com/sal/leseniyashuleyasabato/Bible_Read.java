@@ -102,16 +102,15 @@ public class Bible_Read extends AppCompatActivity implements RecyclerViewClicks{
         String bookName = get.getStringExtra("bookName");
         bookId = get.getIntExtra("bookPosition", 1);
         chapter = get.getIntExtra("Chapters", 1);
-        bookNChapter = getBookNameWithoutTXT(bookId) + " " +chapter;
+
+
+        bookNChapter = getBookNameWithoutTXT(bookId) + " " + chapter;
         verseTextBox.setText(bookNChapter);
 
         hideFabHandler = new Handler();
-        hideFabRunnable = new Runnable() {
-            @Override
-            public void run() {
-                left.setVisibility(View.GONE);
-                right.setVisibility(View.GONE);
-            }
+        hideFabRunnable = () -> {
+            left.setVisibility(View.GONE);
+            right.setVisibility(View.GONE);
         };
 
         // Detect touch events

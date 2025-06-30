@@ -113,6 +113,7 @@ public class TeacherCommentsActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String selectedWeek = "WK-" + (position + 1); // Adjusted to start from WK-1
+                Toast.makeText(TeacherCommentsActivity.this, selectedWeek, Toast.LENGTH_SHORT).show();
                 loadTeacherComment(path + "/" + selectedWeek + "/teacher/Teacher_Comments");
             }
 
@@ -148,22 +149,65 @@ public class TeacherCommentsActivity extends AppCompatActivity {
 
     private void displayComment(String comment) {
         commentsContainer.removeAllViews(); // Clear previous comments
-
+        Toast.makeText(TeacherCommentsActivity.this, comment, Toast.LENGTH_SHORT).show();
         createTextViews(comment);
-        /*TextView textView = new TextView(TeacherCommentsActivity.this);
-        textView.setLayoutParams(new LinearLayout.LayoutParams(
+    }
+
+    public void createTextViews(String mafungu) {
+        commentsContainer.removeAllViews(); // Always clear first
+
+        Map<String, String> titleContentMap = new LinkedHashMap<>();
+        Pattern pattern = Pattern.compile("\\*(.*?)\\*([^*]+)");
+        Matcher matcher = pattern.matcher(mafungu);
+
+        while (matcher.find()) {
+            String title = matcher.group(1).trim();
+            String content = matcher.group(2).trim();
+            titleContentMap.put(title, content);
+        }
+
+        LinearLayout linearLayout = new LinearLayout(this);
+        linearLayout.setOrientation(LinearLayout.VERTICAL);
+
+        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-        ));
-        textView.setText( spannableBibleText(comment));
-        textView.setTextSize(16);
-        textView.setPadding(16, 16, 16, 16);
-        textView.setBackgroundColor(Color.parseColor("#F8F8F8"));
-        textView.setTextColor(Color.BLACK);
-        textView.setMovementMethod(LinkMovementMethod.getInstance());
+        );
+        layoutParams.setMargins(0, 20, 0, 0);
 
-        commentsContainer.addView(textView); // Add the TextView to the container*/
+        if (titleContentMap.isEmpty()) {
+            // 🛑 No asterisk-formatted data found – fallback to showing the whole comment
+            TextView fallbackTextView = new TextView(this);
+            fallbackTextView.setText(spannableBibleText(mafungu));
+            fallbackTextView.setTextSize(getTextSize());
+            fallbackTextView.setMovementMethod(LinkMovementMethod.getInstance());
+            fallbackTextView.setLayoutParams(layoutParams);
+            linearLayout.addView(fallbackTextView);
+        } else {
+            // 👍 Add structured title-content pairs
+            for (Map.Entry<String, String> entry : titleContentMap.entrySet()) {
+                String title = entry.getKey();
+                String content = entry.getValue();
+
+                TextView titleTextView = new TextView(this);
+                titleTextView.setText(title);
+                titleTextView.setTextSize(getTextSize());
+                titleTextView.setLayoutParams(layoutParams);
+                titleTextView.setTypeface(null, Typeface.BOLD);
+                linearLayout.addView(titleTextView);
+
+                TextView contentTextView = new TextView(this);
+                contentTextView.setText(spannableBibleText(content));
+                contentTextView.setTextSize(getTextSize());
+                contentTextView.setMovementMethod(LinkMovementMethod.getInstance());
+                contentTextView.setLayoutParams(layoutParams);
+                linearLayout.addView(contentTextView);
+            }
+        }
+
+        commentsContainer.addView(linearLayout);
     }
+
 
 
     public ArrayList<Integer> bible_Chapters(String fileName, int chaptr) {
@@ -228,59 +272,6 @@ public class TeacherCommentsActivity extends AppCompatActivity {
 
         return chapters;
     }
-
-    public void createTextViews(String mafungu) {
-        // LinkedHashMap to preserve insertion order
-        Map<String, String> titleContentMap = new LinkedHashMap<>();
-
-        // Regex pattern to extract title-content pairs based on asterisks
-        Pattern pattern = Pattern.compile("\\*(.*?)\\*([^*]+)");  // Matches *title*content
-        Matcher matcher = pattern.matcher(mafungu);
-
-        while (matcher.find()) {
-            String title = matcher.group(1).trim(); // Title is between asterisks
-            String content = matcher.group(2).trim(); // Content is after the title
-            titleContentMap.put(title, content);  // Add to LinkedHashMap
-        }
-
-        // Create a LinearLayout to dynamically add TextViews
-        LinearLayout linearLayout = new LinearLayout(this);
-        linearLayout.setOrientation(LinearLayout.VERTICAL);
-
-        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-        layoutParams.setMargins(0, 20, 0, 0); // 20dp top margin, adjust as needed
-
-        // Iterate over the LinkedHashMap to create TextViews for each title-content pair
-        for (Map.Entry<String, String> entry : titleContentMap.entrySet()) {
-            String title = entry.getKey();
-            String content = entry.getValue();
-
-            // Create TextView for title (bold)
-            TextView titleTextView = new TextView(this);
-            titleTextView.setText(title);
-            titleTextView.setTextSize(getTextSize());
-            titleTextView.setLayoutParams(layoutParams);
-            titleTextView.setTypeface(null, Typeface.BOLD); // Bold the title
-            linearLayout.addView(titleTextView); // Add to layout
-
-            // Create SpannableString for content with verse spans
-            SpannableString spannableContent = spannableBibleText(content);
-
-            // Create TextView for content and apply the spannable string
-            TextView contentTextView = new TextView(this);
-            contentTextView.setText(spannableContent);
-            contentTextView.setTextSize(getTextSize());
-            contentTextView.setMovementMethod(LinkMovementMethod.getInstance()); // Enable clicks
-            linearLayout.addView(contentTextView); // Add to layout
-        }
-
-        // Add the LinearLayout to your parent layout
-        commentsContainer.addView(linearLayout);
-    }
-
 
 
     // Define a regex pattern to match all Swahili book names and verse numbers
@@ -492,6 +483,7 @@ public class TeacherCommentsActivity extends AppCompatActivity {
         bible.putExtra("startVerse", StartStop.get(0));
         bible.putExtra("stopVerse", StartStop.get(1));
         bible.putExtra("bookName", book);
+        bible.putExtra("", findStringInArray(new BibleStuff().books, book));
         startActivity(bible);
     }
 
@@ -503,6 +495,20 @@ public class TeacherCommentsActivity extends AppCompatActivity {
     private int getTextSize(){
         SharedPreferences settings = getSharedPreferences("AppSettings", Context.MODE_PRIVATE);
         return settings.getInt("textSize", 16);
+    }
+
+    public int findStringInArray(String[] array, String target) {
+        if (array == null || target == null) {
+            return -1; // Return -1 if the array or target is null
+        }
+
+        for (int i = 0; i < array.length; i++) {
+            if (array[i].equals(target)) {
+                return i; // Return the index if the target is found
+            }
+        }
+
+        return -1; // Return -1 if the target is not found
     }
 
 }

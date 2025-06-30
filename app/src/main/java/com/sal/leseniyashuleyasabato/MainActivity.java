@@ -150,7 +150,6 @@ public class MainActivity extends AppCompatActivity
     private boolean isFirstLaunch = true;
 
     public String todayWeekId;
-    ProgressBar dataProgressBar;
 
 
     /* JADX INFO: Access modifiers changed from: protected */
@@ -159,7 +158,6 @@ public class MainActivity extends AppCompatActivity
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // Get the SharedPreferences to check registration status
-        dataProgressBar = findViewById(R.id.dataProgressBar);
         SharedPreferences prefs = getSharedPreferences("MyAppPrefs", MODE_PRIVATE);
         boolean isRegistered = prefs.getBoolean("isRegistered", false);
         boolean isLoggedIn = prefs.getBoolean("isLogged", true);
@@ -372,7 +370,12 @@ public class MainActivity extends AppCompatActivity
                 sharedPrefsManager = new SharedPrefsManager(this);
 
 // ✅ Show progress bar before loading starts
-                //dataProgressBar.setVisibility(View.VISIBLE);
+
+                ProgressBar dataProgressBar = findViewById(R.id.dataProgressBar);
+                TextView progressText = findViewById(R.id.progressText);
+
+                dataProgressBar.setVisibility(View.VISIBLE);
+                progressText.setVisibility(View.VISIBLE);
 
                 lessonRepository.fetchYearData(choosenYear, isOnline, yearData -> {
                     Log.d("DEBUG", "fetchYearData completed. Waiting before loading spinner...");
@@ -381,7 +384,8 @@ public class MainActivity extends AppCompatActivity
                         Log.d("DEBUG", "Loading spinner with fresh data from SharedPrefs...");
 
                         // ✅ Hide the progress bar after data is fetched and delay passed
-                        //dataProgressBar.setVisibility(View.GONE);
+                        dataProgressBar.setVisibility(View.GONE);
+                        progressText.setVisibility(View.GONE);
 
                         loadSpinnerWithWeeks(); // Load weeks now
                     }, 1000); // 1 second delay
@@ -475,26 +479,23 @@ scrollLeftButton.setOnClickListener(v -> {
             
 // In your MainActivity
 FloatingActionButton btnOpenFragment = findViewById(R.id.btnOpenFragment);
-btnOpenFragment.setOnClickListener(new View.OnClickListener() {
-    @Override
-    public void onClick(View v) {
-        String teacher_Titles = "quarters_"+choosenYear +"/"+ choosenQuarter + "/" + "weeks";
-        Integer spinnerPosition = QWeeks.getSelectedItemPosition();
-        Intent teacherComments = new Intent(MainActivity.this, TeacherCommentsActivity.class);
-        teacherComments.putExtra("path_name", teacher_Titles);
-        teacherComments.putExtra("wk_comment", spinnerPosition);
-        startActivity(teacherComments);
+btnOpenFragment.setOnClickListener(v -> {
+    String teacher_Titles = "quarters_"+choosenYear +"/"+ choosenQuarter + "/" + "weeks";
+    Integer spinnerPosition = QWeeks.getSelectedItemPosition();
+    Intent teacherComments = new Intent(MainActivity.this, TeacherCommentsActivity.class);
+    teacherComments.putExtra("path_name", teacher_Titles);
+    teacherComments.putExtra("wk_comment", spinnerPosition);
+    startActivity(teacherComments);
 
-        /* fragment data:
-        Bundle args = new Bundle();
-        args.putString("path_name", teacher_Titles);
-        args.putInt("wk_comment", spinnerPosition);                                
-        TeacherCommentsFragment fragment = new TeacherCommentsFragment();
-        fragment.setArguments(args);                
-        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-        transaction.replace(R.id.fragment_container, fragment).addToBackStack(null) // Replace the existing fragment
-                   .commitAllowingStateLoss(); // Commit the transaction */
-    }
+    /* fragment data:
+    Bundle args = new Bundle();
+    args.putString("path_name", teacher_Titles);
+    args.putInt("wk_comment", spinnerPosition);
+    TeacherCommentsFragment fragment = new TeacherCommentsFragment();
+    fragment.setArguments(args);
+    FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+    transaction.replace(R.id.fragment_container, fragment).addToBackStack(null) // Replace the existing fragment
+               .commitAllowingStateLoss(); // Commit the transaction */
 });
             
             
